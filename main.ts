@@ -45,15 +45,9 @@ export default class MinimizeToolbarPlugin extends Plugin {
     return view !== null && view.getMode() !== 'preview';
   }
 
-  private isKeyboardVisible(): boolean {
-    if (!window.visualViewport) return false;
-    return (window.innerHeight - window.visualViewport.height) > 150;
-  }
-
   syncVisibility() {
     if (!this.btn) return;
-    const show = this.isEditorActive() && this.isKeyboardVisible();
-    this.btn.style.display = show ? 'flex' : 'none';
+    this.btn.style.display = this.isEditorActive() ? 'flex' : 'none';
   }
 
   private createButton() {

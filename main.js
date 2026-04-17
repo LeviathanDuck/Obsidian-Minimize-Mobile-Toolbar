@@ -57,16 +57,10 @@ var MinimizeToolbarPlugin = class extends import_obsidian.Plugin {
     const view = this.app.workspace.getActiveViewOfType(import_obsidian.MarkdownView);
     return view !== null && view.getMode() !== "preview";
   }
-  isKeyboardVisible() {
-    if (!window.visualViewport)
-      return false;
-    return window.innerHeight - window.visualViewport.height > 150;
-  }
   syncVisibility() {
     if (!this.btn)
       return;
-    const show = this.isEditorActive() && this.isKeyboardVisible();
-    this.btn.style.display = show ? "flex" : "none";
+    this.btn.style.display = this.isEditorActive() ? "flex" : "none";
   }
   createButton() {
     this.btn = document.createElement("div");
