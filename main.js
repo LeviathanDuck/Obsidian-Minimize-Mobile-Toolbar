@@ -47,9 +47,17 @@ var MinimizeToolbarPlugin = class extends import_obsidian.Plugin {
       this.createButtons();
       this.applyState();
       this.wireKeyboardDetection();
+      this.attachToToolbar();
+      this.observeToolbar();
     });
-    this.registerEvent(this.app.workspace.on("layout-change", () => this.applyState()));
-    this.registerEvent(this.app.workspace.on("active-leaf-change", () => this.applyState()));
+    this.registerEvent(this.app.workspace.on("layout-change", () => {
+      this.applyState();
+      this.attachToToolbar();
+    }));
+    this.registerEvent(this.app.workspace.on("active-leaf-change", () => {
+      this.applyState();
+      this.attachToToolbar();
+    }));
   }
   createButtons() {
     this.btnMinimize = this.makeButton("mt-minimize", ICON_MINIMIZE, () => this.setHidden(true));
@@ -91,6 +99,20 @@ var MinimizeToolbarPlugin = class extends import_obsidian.Plugin {
   }
   setKb(active) {
     document.body.toggleClass(CLS_KB_ACTIVE, active);
+  }
+  attachToToolbar() {
+    const toolbar = document.querySelector(".mobile-toolbar");
+    if (!toolbar)
+      return;
+    [this.btnMinimize, this.btnExpand, this.btnDismiss].forEach((b) => {
+      if (b && b.parentElement !== toolbar)
+        toolbar.appendChild(b);
+    });
+  }
+  observeToolbar() {
+    const obs = new MutationObserver(() => this.attachToToolbar());
+    obs.observe(document.body, { childList: true, subtree: true });
+    this.register(() => obs.disconnect());
   }
   dismissKeyboard() {
     var _a, _b, _c;
