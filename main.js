@@ -29,7 +29,6 @@ var ICON_DISMISS_KB = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height
 var DEFAULTS = { hidden: false };
 var CLS_HIDDEN = "mt-hidden";
 var CLS_KB_ACTIVE = "mt-keyboard-active";
-var CLS_NATIVE_HIDDEN = "mt-native-dismiss-hidden";
 var MinimizeToolbarPlugin = class extends import_obsidian.Plugin {
   constructor() {
     super(...arguments);
@@ -45,36 +44,10 @@ var MinimizeToolbarPlugin = class extends import_obsidian.Plugin {
     this.app.workspace.onLayoutReady(() => {
       this.createButtons();
       this.applyState();
-      this.hideNativeDismiss();
       this.wireKeyboardDetection();
     });
-    this.registerEvent(this.app.workspace.on("layout-change", () => {
-      this.applyState();
-      this.hideNativeDismiss();
-    }));
-    this.registerEvent(this.app.workspace.on("active-leaf-change", () => {
-      this.applyState();
-      this.hideNativeDismiss();
-    }));
-  }
-  toolbar() {
-    return document.querySelector(".mobile-toolbar");
-  }
-  findNativeDismissBtn() {
-    const t = this.toolbar();
-    if (!t)
-      return null;
-    const byLabel = t.querySelector('.mobile-toolbar-option[aria-label*="keyboard" i]') || t.querySelector('.mobile-toolbar-option[aria-label*="close" i]') || t.querySelector('.mobile-toolbar-option[aria-label*="dismiss" i]');
-    if (byLabel)
-      return byLabel;
-    const opts = t.querySelectorAll(".mobile-toolbar-option");
-    return opts.length ? opts[opts.length - 1] : null;
-  }
-  hideNativeDismiss() {
-    document.querySelectorAll(`.${CLS_NATIVE_HIDDEN}`).forEach((el) => el.classList.remove(CLS_NATIVE_HIDDEN));
-    const native = this.findNativeDismissBtn();
-    if (native)
-      native.classList.add(CLS_NATIVE_HIDDEN);
+    this.registerEvent(this.app.workspace.on("layout-change", () => this.applyState()));
+    this.registerEvent(this.app.workspace.on("active-leaf-change", () => this.applyState()));
   }
   createButtons() {
     this.btnMinimize = this.makeButton("mt-minimize", ICON_MINIMIZE, () => this.setHidden(true));
@@ -116,8 +89,6 @@ var MinimizeToolbarPlugin = class extends import_obsidian.Plugin {
   }
   setKb(active) {
     document.body.toggleClass(CLS_KB_ACTIVE, active);
-    if (active)
-      this.hideNativeDismiss();
   }
   dismissKeyboard() {
     var _a, _b, _c;
@@ -139,7 +110,6 @@ var MinimizeToolbarPlugin = class extends import_obsidian.Plugin {
   onunload() {
     document.body.removeClass(CLS_HIDDEN);
     document.body.removeClass(CLS_KB_ACTIVE);
-    document.querySelectorAll(`.${CLS_NATIVE_HIDDEN}`).forEach((el) => el.classList.remove(CLS_NATIVE_HIDDEN));
   }
   async loadSettings() {
     this.settings = Object.assign({}, DEFAULTS, await this.loadData());

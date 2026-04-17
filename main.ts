@@ -9,7 +9,6 @@ const DEFAULTS: Settings = { hidden: false };
 
 const CLS_HIDDEN = 'mt-hidden';
 const CLS_KB_ACTIVE = 'mt-keyboard-active';
-const CLS_NATIVE_HIDDEN = 'mt-native-dismiss-hidden';
 
 export default class MinimizeToolbarPlugin extends Plugin {
   settings: Settings;
@@ -25,40 +24,11 @@ export default class MinimizeToolbarPlugin extends Plugin {
     this.app.workspace.onLayoutReady(() => {
       this.createButtons();
       this.applyState();
-      this.hideNativeDismiss();
       this.wireKeyboardDetection();
     });
 
-    this.registerEvent(this.app.workspace.on('layout-change', () => {
-      this.applyState();
-      this.hideNativeDismiss();
-    }));
-    this.registerEvent(this.app.workspace.on('active-leaf-change', () => {
-      this.applyState();
-      this.hideNativeDismiss();
-    }));
-  }
-
-  private toolbar(): HTMLElement | null {
-    return document.querySelector('.mobile-toolbar');
-  }
-
-  private findNativeDismissBtn(): HTMLElement | null {
-    const t = this.toolbar();
-    if (!t) return null;
-    const byLabel =
-      t.querySelector('.mobile-toolbar-option[aria-label*="keyboard" i]') ||
-      t.querySelector('.mobile-toolbar-option[aria-label*="close" i]') ||
-      t.querySelector('.mobile-toolbar-option[aria-label*="dismiss" i]');
-    if (byLabel) return byLabel as HTMLElement;
-    const opts = t.querySelectorAll('.mobile-toolbar-option');
-    return opts.length ? (opts[opts.length - 1] as HTMLElement) : null;
-  }
-
-  private hideNativeDismiss() {
-    document.querySelectorAll(`.${CLS_NATIVE_HIDDEN}`).forEach(el => el.classList.remove(CLS_NATIVE_HIDDEN));
-    const native = this.findNativeDismissBtn();
-    if (native) native.classList.add(CLS_NATIVE_HIDDEN);
+    this.registerEvent(this.app.workspace.on('layout-change', () => this.applyState()));
+    this.registerEvent(this.app.workspace.on('active-leaf-change', () => this.applyState()));
   }
 
   private createButtons() {
@@ -100,7 +70,6 @@ export default class MinimizeToolbarPlugin extends Plugin {
 
   private setKb(active: boolean) {
     document.body.toggleClass(CLS_KB_ACTIVE, active);
-    if (active) this.hideNativeDismiss();
   }
 
   private dismissKeyboard() {
@@ -125,7 +94,6 @@ export default class MinimizeToolbarPlugin extends Plugin {
   onunload() {
     document.body.removeClass(CLS_HIDDEN);
     document.body.removeClass(CLS_KB_ACTIVE);
-    document.querySelectorAll(`.${CLS_NATIVE_HIDDEN}`).forEach(el => el.classList.remove(CLS_NATIVE_HIDDEN));
   }
 
   async loadSettings() {
