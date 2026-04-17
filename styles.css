@@ -11,35 +11,14 @@ body.mt-active::before {
   pointer-events: none;
 }
 
-/* --- MINIMIZED STATE --- */
-/* Hide every native descendant inside the toolbar, keep our buttons */
-body.mt-hidden .mobile-toolbar > *:not([id^="mt-"]),
-body.mt-hidden .mobile-toolbar .mobile-toolbar-options-list > *:not([id^="mt-"]) {
-  display: none !important;
-}
-/* Keep the options-list container itself visible so our buttons stay in flex flow */
-body.mt-hidden .mobile-toolbar .mobile-toolbar-options-list {
-  display: flex !important;
-  background: transparent !important;
-  padding: 0 !important;
-  min-height: 0 !important;
-}
-/* Zero the spacer so no empty strip below */
-body.mt-hidden .mobile-toolbar-spacer { height: 0 !important; min-height: 0 !important; }
-/* Strip the toolbar's own chrome so it doesn't show as a black bar */
-body.mt-hidden .mobile-toolbar {
-  background: transparent !important;
-  background-color: transparent !important;
-  border: none !important;
-  border-top: none !important;
-  box-shadow: none !important;
-  padding: 0 !important;
-  min-height: 0 !important;
-}
+/* Hide toolbar + spacer when minimized */
+body.mt-hidden .mobile-toolbar { display: none; }
+body.mt-hidden .mobile-toolbar-spacer { height: 0; min-height: 0; }
 
-/* --- BUTTONS --- */
-/* Zero-chrome button: just the SVG in accent color, no box. */
+/* Buttons: zero-chrome, just the SVG.
+   Pinned center-screen so they're visible while we solve placement separately. */
 .mt-btn {
+  position: fixed;
   width: 44px;
   height: 44px;
   display: none;
@@ -48,23 +27,24 @@ body.mt-hidden .mobile-toolbar {
   background: transparent;
   border: none;
   padding: 0;
-  margin: 0;
   color: var(--interactive-accent);
   cursor: pointer;
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
-  flex-shrink: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 99999;
 }
 
 .mt-btn svg { pointer-events: none; display: block; }
+
+/* Horizontal placement — cluster near center */
+#mt-minimize { right: calc(50% - 22px); }
+#mt-dismiss  { right: calc(50% - 22px); }
+#mt-expand   { right: calc(50% + 34px); }
 
 /* State-gated visibility */
 body.mt-active:not(.mt-hidden) #mt-minimize { display: flex; }
 body.mt-active.mt-hidden #mt-expand,
 body.mt-active.mt-hidden #mt-dismiss { display: flex; }
-
-/* Right-align: margin-left:auto on the first visible of our buttons
-   pushes it and everything after it to the right end of the flex container. */
-body.mt-active:not(.mt-hidden) #mt-minimize { margin-left: auto; }
-body.mt-active.mt-hidden #mt-expand { margin-left: auto; }

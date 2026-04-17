@@ -27,18 +27,10 @@ export default class MinimizeToolbarPlugin extends Plugin {
       this.createButtons();
       this.applyState();
       this.wireKeyboardDetection();
-      this.attachToToolbar();
-      this.observeToolbar();
     });
 
-    this.registerEvent(this.app.workspace.on('layout-change', () => {
-      this.applyState();
-      this.attachToToolbar();
-    }));
-    this.registerEvent(this.app.workspace.on('active-leaf-change', () => {
-      this.applyState();
-      this.attachToToolbar();
-    }));
+    this.registerEvent(this.app.workspace.on('layout-change', () => this.applyState()));
+    this.registerEvent(this.app.workspace.on('active-leaf-change', () => this.applyState()));
   }
 
   private createButtons() {
@@ -80,22 +72,6 @@ export default class MinimizeToolbarPlugin extends Plugin {
 
   private setKb(active: boolean) {
     document.body.toggleClass(CLS_KB_ACTIVE, active);
-  }
-
-  private attachToToolbar() {
-    const optionsList = document.querySelector('.mobile-toolbar .mobile-toolbar-options-list') as HTMLElement | null;
-    const toolbar = document.querySelector('.mobile-toolbar') as HTMLElement | null;
-    const host = optionsList ?? toolbar;
-    if (!host) return;
-    [this.btnMinimize, this.btnExpand, this.btnDismiss].forEach(b => {
-      if (b && b.parentElement !== host) host.appendChild(b);
-    });
-  }
-
-  private observeToolbar() {
-    const obs = new MutationObserver(() => this.attachToToolbar());
-    obs.observe(document.body, { childList: true, subtree: true });
-    this.register(() => obs.disconnect());
   }
 
   private dismissKeyboard() {
