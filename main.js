@@ -29,6 +29,7 @@ var ICON_DISMISS_KB = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height
 var DEFAULTS = { hidden: false };
 var CLS_HIDDEN = "mt-hidden";
 var CLS_KB_ACTIVE = "mt-keyboard-active";
+var CLS_ACTIVE = "mt-active";
 var MinimizeToolbarPlugin = class extends import_obsidian.Plugin {
   constructor() {
     super(...arguments);
@@ -42,9 +43,17 @@ var MinimizeToolbarPlugin = class extends import_obsidian.Plugin {
     if (!import_obsidian.Platform.isMobile)
       return;
     this.app.workspace.onLayoutReady(() => {
+      console.log("[minimize-toolbar] onLayoutReady fired, mobile=", import_obsidian.Platform.isMobile);
+      document.body.addClass(CLS_ACTIVE);
       this.createButtons();
       this.applyState();
       this.wireKeyboardDetection();
+      console.log(
+        "[minimize-toolbar] setup complete, buttons in DOM:",
+        !!document.getElementById("mt-minimize"),
+        !!document.getElementById("mt-expand"),
+        !!document.getElementById("mt-dismiss")
+      );
     });
     this.registerEvent(this.app.workspace.on("layout-change", () => this.applyState()));
     this.registerEvent(this.app.workspace.on("active-leaf-change", () => this.applyState()));
@@ -110,6 +119,7 @@ var MinimizeToolbarPlugin = class extends import_obsidian.Plugin {
   onunload() {
     document.body.removeClass(CLS_HIDDEN);
     document.body.removeClass(CLS_KB_ACTIVE);
+    document.body.removeClass(CLS_ACTIVE);
   }
   async loadSettings() {
     this.settings = Object.assign({}, DEFAULTS, await this.loadData());

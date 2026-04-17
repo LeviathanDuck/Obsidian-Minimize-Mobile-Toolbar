@@ -2,8 +2,21 @@
 body.mt-hidden .mobile-toolbar { display: none; }
 body.mt-hidden .mobile-toolbar-spacer { height: 0; }
 
-/* Base button: hidden by default, minimal, flat, accent-colored.
-   Sits ~80px above the screen bottom — above the native toolbar when visible. */
+/* DEBUG marker — proves plugin CSS is loaded at all.
+   Tiny red square in top-left corner whenever plugin is active on mobile. */
+body.mt-active::before {
+  content: "";
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  width: 10px;
+  height: 10px;
+  background: red;
+  z-index: 99999;
+  pointer-events: none;
+}
+
+/* Base button: minimal, flat, accent-colored with visible outline so we can see it. */
 .mt-btn {
   position: fixed;
   width: 44px;
@@ -12,9 +25,10 @@ body.mt-hidden .mobile-toolbar-spacer { height: 0; }
   align-items: center;
   justify-content: center;
   background: var(--background-primary);
-  border: 1px solid var(--background-modifier-border);
+  border: 2px solid var(--interactive-accent);
+  border-radius: 4px;
   color: var(--interactive-accent);
-  z-index: 9999;
+  z-index: 99999;
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
@@ -24,7 +38,7 @@ body.mt-hidden .mobile-toolbar-spacer { height: 0; }
 
 .mt-btn svg { pointer-events: none; }
 
-/* Placement — rightmost is #mt-minimize / #mt-dismiss; #mt-expand sits to its left */
+/* Horizontal placement */
 #mt-minimize,
 #mt-dismiss {
   right: calc(env(safe-area-inset-right, 0px) + 12px);
@@ -33,7 +47,8 @@ body.mt-hidden .mobile-toolbar-spacer { height: 0; }
   right: calc(env(safe-area-inset-right, 0px) + 64px);
 }
 
-/* Visibility gated on keyboard-active + toolbar state */
-body.mt-keyboard-active:not(.mt-hidden) #mt-minimize { display: flex; }
-body.mt-keyboard-active.mt-hidden #mt-expand,
-body.mt-keyboard-active.mt-hidden #mt-dismiss { display: flex; }
+/* DEBUG: show buttons whenever plugin is active, regardless of keyboard state.
+   Once we confirm visibility, we'll re-add the keyboard gate. */
+body.mt-active:not(.mt-hidden) #mt-minimize { display: flex; }
+body.mt-active.mt-hidden #mt-expand,
+body.mt-active.mt-hidden #mt-dismiss { display: flex; }

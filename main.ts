@@ -9,6 +9,7 @@ const DEFAULTS: Settings = { hidden: false };
 
 const CLS_HIDDEN = 'mt-hidden';
 const CLS_KB_ACTIVE = 'mt-keyboard-active';
+const CLS_ACTIVE = 'mt-active';
 
 export default class MinimizeToolbarPlugin extends Plugin {
   settings: Settings;
@@ -22,9 +23,15 @@ export default class MinimizeToolbarPlugin extends Plugin {
     if (!Platform.isMobile) return;
 
     this.app.workspace.onLayoutReady(() => {
+      console.log('[minimize-toolbar] onLayoutReady fired, mobile=', Platform.isMobile);
+      document.body.addClass(CLS_ACTIVE);
       this.createButtons();
       this.applyState();
       this.wireKeyboardDetection();
+      console.log('[minimize-toolbar] setup complete, buttons in DOM:',
+        !!document.getElementById('mt-minimize'),
+        !!document.getElementById('mt-expand'),
+        !!document.getElementById('mt-dismiss'));
     });
 
     this.registerEvent(this.app.workspace.on('layout-change', () => this.applyState()));
@@ -94,6 +101,7 @@ export default class MinimizeToolbarPlugin extends Plugin {
   onunload() {
     document.body.removeClass(CLS_HIDDEN);
     document.body.removeClass(CLS_KB_ACTIVE);
+    document.body.removeClass(CLS_ACTIVE);
   }
 
   async loadSettings() {
