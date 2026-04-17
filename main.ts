@@ -27,8 +27,6 @@ export default class MinimizeToolbarPlugin extends Plugin {
       this.createButtons();
       this.applyState();
       this.wireKeyboardDetection();
-      this.wireViewportPositioning();
-      this.syncPosition();
     });
 
     this.registerEvent(this.app.workspace.on('layout-change', () => this.applyState()));
@@ -74,28 +72,6 @@ export default class MinimizeToolbarPlugin extends Plugin {
 
   private setKb(active: boolean) {
     document.body.toggleClass(CLS_KB_ACTIVE, active);
-    this.syncPosition();
-  }
-
-  private wireViewportPositioning() {
-    if (!window.visualViewport) return;
-    const vv = window.visualViewport;
-    const handler = () => this.syncPosition();
-    vv.addEventListener('resize', handler);
-    vv.addEventListener('scroll', handler);
-    this.register(() => {
-      vv.removeEventListener('resize', handler);
-      vv.removeEventListener('scroll', handler);
-    });
-  }
-
-  private syncPosition() {
-    const vv = window.visualViewport;
-    const kbHeight = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
-    const btns = [this.btnMinimize, this.btnExpand, this.btnDismiss];
-    btns.forEach(b => {
-      if (b) b.style.bottom = `calc(${kbHeight + 60}px + env(safe-area-inset-bottom, 0px))`;
-    });
   }
 
   private dismissKeyboard() {

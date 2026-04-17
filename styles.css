@@ -19,8 +19,8 @@ body.mt-active::before {
 /* Base button: minimal, flat, accent-colored with visible outline so we can see it. */
 .mt-btn {
   position: fixed;
-  width: 44px;
-  height: 44px;
+  width: 56px;
+  height: 56px;
   display: none;
   align-items: center;
   justify-content: center;
@@ -33,19 +33,16 @@ body.mt-active::before {
   user-select: none;
   -webkit-user-select: none;
   cursor: pointer;
-  /* bottom set dynamically by main.ts via visualViewport */
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .mt-btn svg { pointer-events: none; }
 
-/* Horizontal placement */
-#mt-minimize,
-#mt-dismiss {
-  right: calc(env(safe-area-inset-right, 0px) + 12px);
-}
-#mt-expand {
-  right: calc(env(safe-area-inset-right, 0px) + 64px);
-}
+/* Horizontal placement — centered cluster in middle of screen */
+#mt-minimize { left: calc(50% - 28px); }
+#mt-dismiss  { left: calc(50% + 36px); }
+#mt-expand   { left: calc(50% - 92px); }
 
 /* DEBUG: show buttons whenever plugin is active, regardless of keyboard state.
    Once we confirm visibility, we'll re-add the keyboard gate. */
