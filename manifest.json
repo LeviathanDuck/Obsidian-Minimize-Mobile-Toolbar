@@ -1,0 +1,10 @@
+{
+  "id": "minimize-toolbar",
+  "name": "Minimize Mobile Editor Toolbar",
+  "version": "1.0.0",
+  "minAppVersion": "0.15.0",
+  "description": "Floating toggle button to hide and show the Obsidian mobile editor toolbar.",
+  "author": "Leviathan Duck",
+  "authorUrl": "https://github.com/LeviathanDuck",
+  "isDesktopOnly": false
+}
