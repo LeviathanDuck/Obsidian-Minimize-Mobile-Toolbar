@@ -33,7 +33,7 @@ body.mt-active::before {
   user-select: none;
   -webkit-user-select: none;
   cursor: pointer;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 80px);
+  /* bottom set dynamically by main.ts via visualViewport */
 }
 
 .mt-btn svg { pointer-events: none; }
