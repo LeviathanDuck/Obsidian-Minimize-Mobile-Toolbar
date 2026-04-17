@@ -37,6 +37,7 @@ export default class MinimizeToolbarPlugin extends Plugin {
     this.syncPosition();
     document.body.appendChild(this.btn);
     this.wireDragAndTap();
+    this.wireViewport();
   }
 
   syncIcon() {
@@ -45,8 +46,22 @@ export default class MinimizeToolbarPlugin extends Plugin {
 
   syncPosition() {
     if (!this.btn) return;
-    this.btn.style.bottom = `calc(${this.settings.bottom}px + env(safe-area-inset-bottom, 0px))`;
+    const vv = window.visualViewport;
+    const kbHeight = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
+    const bottom = this.settings.bottom + kbHeight;
+    this.btn.style.bottom = `calc(${bottom}px + env(safe-area-inset-bottom, 0px))`;
     this.btn.style.right = `calc(${this.settings.right}px + env(safe-area-inset-right, 0px))`;
+  }
+
+  private wireViewport() {
+    if (!window.visualViewport) return;
+    const handler = () => this.syncPosition();
+    window.visualViewport.addEventListener('resize', handler);
+    window.visualViewport.addEventListener('scroll', handler);
+    this.register(() => {
+      window.visualViewport?.removeEventListener('resize', handler);
+      window.visualViewport?.removeEventListener('scroll', handler);
+    });
   }
 
   private wireDragAndTap() {
@@ -114,7 +129,7 @@ class SettingsTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName('Button — bottom (px)')
-      .setDesc('Distance from bottom of screen. Drag the button to reposition, or set here.')
+      .setDesc('Gap above the keyboard (or screen bottom when keyboard is hidden). Drag the button to reposition.')
       .addText(t => t
         .setValue(String(this.plugin.settings.bottom))
         .onChange(async v => {
