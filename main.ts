@@ -103,7 +103,10 @@ export default class MinimizeToolbarPlugin extends Plugin {
   private applyOffset() {
     if (!this.flexContainer) return;
     const offset = this.settings.hidden ? this.settings.offsetHidden : this.settings.offsetVisible;
-    this.flexContainer.style.marginBottom = `${offset}px`;
+    // Keep the container in flex flow with zero margin — the visual lift is done
+    // via translateY on the buttons, so no gap in the layout shows bg color.
+    this.flexContainer.style.marginBottom = '0';
+    this.flexContainer.style.setProperty('--mt-offset', `${offset}px`);
   }
 
   private wireKeyboardDetection() {

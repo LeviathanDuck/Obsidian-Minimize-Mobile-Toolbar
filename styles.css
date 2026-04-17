@@ -37,7 +37,9 @@ body.mt-hidden .mobile-toolbar-spacer {
 .mt-btn svg { pointer-events: none; display: block; }
 
 /* Flex-sibling container: lives in .app-container, rides natural layout flow.
-   Hidden by default; only shown when the keyboard is active. */
+   Hidden by default; only shown when the keyboard is active.
+   No margin — buttons lift themselves via transform so we don't create a
+   layout gap that would reveal .app-container's background. */
 .mt-flex-container {
   display: none;
   flex-direction: row;
@@ -45,6 +47,13 @@ body.mt-hidden .mobile-toolbar-spacer {
   align-items: center;
   gap: 8px;
   padding: 0 12px;
+  margin: 0;
+  height: 0;
+  overflow: visible;
+}
+
+.mt-flex-container .mt-btn {
+  transform: translateY(calc(-1 * var(--mt-offset, 0px)));
 }
 
 /* Keyboard up — show container */

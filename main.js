@@ -113,7 +113,8 @@ var MinimizeToolbarPlugin = class extends import_obsidian.Plugin {
     if (!this.flexContainer)
       return;
     const offset = this.settings.hidden ? this.settings.offsetHidden : this.settings.offsetVisible;
-    this.flexContainer.style.marginBottom = `${offset}px`;
+    this.flexContainer.style.marginBottom = "0";
+    this.flexContainer.style.setProperty("--mt-offset", `${offset}px`);
   }
   wireKeyboardDetection() {
     var _a, _b;
