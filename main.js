@@ -35,10 +35,18 @@ var MinimizeToolbarPlugin = class extends import_obsidian.Plugin {
     await this.loadSettings();
     if (!import_obsidian.Platform.isMobile)
       return;
-    this.app.workspace.onLayoutReady(() => this.createButton());
+    this.app.workspace.onLayoutReady(() => {
+      this.createButton();
+      this.applyState();
+    });
+    this.registerEvent(this.app.workspace.on("layout-change", () => this.applyState()));
   }
   toolbar() {
     return document.querySelector(".mobile-toolbar");
+  }
+  toolbarWrap() {
+    var _a, _b;
+    return (_b = (_a = this.toolbar()) == null ? void 0 : _a.parentElement) != null ? _b : null;
   }
   createButton() {
     this.btn = document.createElement("div");
@@ -55,8 +63,18 @@ var MinimizeToolbarPlugin = class extends import_obsidian.Plugin {
   }
   applyState() {
     const t = this.toolbar();
-    if (t)
-      t.style.display = this.settings.hidden ? "none" : "";
+    const w = this.toolbarWrap();
+    if (this.settings.hidden) {
+      if (t)
+        t.style.display = "none";
+      if (w)
+        w.style.display = "none";
+    } else {
+      if (t)
+        t.style.display = "";
+      if (w)
+        w.style.display = "";
+    }
   }
   toggle() {
     this.settings.hidden = !this.settings.hidden;
@@ -68,8 +86,11 @@ var MinimizeToolbarPlugin = class extends import_obsidian.Plugin {
     var _a;
     (_a = this.btn) == null ? void 0 : _a.remove();
     const t = this.toolbar();
+    const w = this.toolbarWrap();
     if (t)
       t.style.display = "";
+    if (w)
+      w.style.display = "";
   }
   async loadSettings() {
     this.settings = Object.assign({}, DEFAULTS, await this.loadData());

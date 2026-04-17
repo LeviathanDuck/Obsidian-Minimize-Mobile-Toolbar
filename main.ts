@@ -13,11 +13,19 @@ export default class MinimizeToolbarPlugin extends Plugin {
   async onload() {
     await this.loadSettings();
     if (!Platform.isMobile) return;
-    this.app.workspace.onLayoutReady(() => this.createButton());
+    this.app.workspace.onLayoutReady(() => {
+      this.createButton();
+      this.applyState();
+    });
+    this.registerEvent(this.app.workspace.on('layout-change', () => this.applyState()));
   }
 
   private toolbar(): HTMLElement | null {
     return document.querySelector('.mobile-toolbar');
+  }
+
+  private toolbarWrap(): HTMLElement | null {
+    return this.toolbar()?.parentElement ?? null;
   }
 
   private createButton() {
@@ -31,12 +39,21 @@ export default class MinimizeToolbarPlugin extends Plugin {
 
   syncIcon() {
     if (!this.btn) return;
+    // hidden=true → toolbar is hidden → show the expand icon
+    // hidden=false → toolbar is visible → show the hide icon
     this.btn.innerHTML = this.settings.hidden ? ICON_SHOW : ICON_HIDE;
   }
 
   applyState() {
     const t = this.toolbar();
-    if (t) t.style.display = this.settings.hidden ? 'none' : '';
+    const w = this.toolbarWrap();
+    if (this.settings.hidden) {
+      if (t) t.style.display = 'none';
+      if (w) w.style.display = 'none';
+    } else {
+      if (t) t.style.display = '';
+      if (w) w.style.display = '';
+    }
   }
 
   toggle() {
@@ -49,7 +66,9 @@ export default class MinimizeToolbarPlugin extends Plugin {
   onunload() {
     this.btn?.remove();
     const t = this.toolbar();
+    const w = this.toolbarWrap();
     if (t) t.style.display = '';
+    if (w) w.style.display = '';
   }
 
   async loadSettings() {
