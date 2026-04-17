@@ -1,6 +1,22 @@
-/* Hide native toolbar + spacer when minimized */
-body.mt-hidden .mobile-toolbar { display: none; }
-body.mt-hidden .mobile-toolbar-spacer { height: 0; min-height: 0; }
+/* Hide native toolbar + spacer when minimized; null out any lingering background */
+body.mt-hidden .mobile-toolbar {
+  display: none !important;
+}
+body.mt-hidden .mobile-toolbar-spacer {
+  height: 0 !important;
+  min-height: 0 !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+/* Our own container carries no chrome regardless of state */
+.mt-flex-container {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
 
 /* Zero-chrome button: just the SVG in accent color */
 .mt-btn {
