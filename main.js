@@ -23,7 +23,9 @@ __export(main_exports, {
 });
 module.exports = __toCommonJS(main_exports);
 var import_obsidian = require("obsidian");
-var DEFAULTS = { bottom: 80, right: 16, hidden: false };
+var DEFAULTS = { bottom: 8, right: 16, hidden: false };
+var ICON_SHOW = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 13l5-5 5 5"/><path d="M7 18l5-5 5 5"/><path d="M4 20h16"/></svg>`;
+var ICON_HIDE = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>`;
 var MinimizeToolbarPlugin = class extends import_obsidian.Plugin {
   constructor() {
     super(...arguments);
@@ -37,16 +39,39 @@ var MinimizeToolbarPlugin = class extends import_obsidian.Plugin {
     this.app.workspace.onLayoutReady(() => {
       this.createButton();
       this.applyState();
+      this.syncVisibility();
     });
-    this.registerEvent(this.app.workspace.on("layout-change", () => this.applyState()));
-    this.registerEvent(this.app.workspace.on("active-leaf-change", () => this.applyState()));
+    this.registerEvent(this.app.workspace.on("layout-change", () => {
+      this.applyState();
+      this.syncVisibility();
+    }));
+    this.registerEvent(this.app.workspace.on("active-leaf-change", () => {
+      this.applyState();
+      this.syncVisibility();
+    }));
   }
   toolbar() {
     return document.querySelector(".mobile-toolbar");
   }
+  isEditorActive() {
+    const view = this.app.workspace.getActiveViewOfType(import_obsidian.MarkdownView);
+    return view !== null && view.getMode() !== "preview";
+  }
+  isKeyboardVisible() {
+    if (!window.visualViewport)
+      return false;
+    return window.innerHeight - window.visualViewport.height > 150;
+  }
+  syncVisibility() {
+    if (!this.btn)
+      return;
+    const show = this.isEditorActive() && this.isKeyboardVisible();
+    this.btn.style.display = show ? "flex" : "none";
+  }
   createButton() {
     this.btn = document.createElement("div");
     this.btn.addClass("mt-toggle");
+    this.btn.style.display = "none";
     this.syncIcon();
     this.syncPosition();
     document.body.appendChild(this.btn);
@@ -54,8 +79,9 @@ var MinimizeToolbarPlugin = class extends import_obsidian.Plugin {
     this.wireViewport();
   }
   syncIcon() {
-    var _a;
-    (_a = this.btn) == null ? void 0 : _a.setText(this.settings.hidden ? "\u25B2" : "\u25BC");
+    if (!this.btn)
+      return;
+    this.btn.innerHTML = this.settings.hidden ? ICON_SHOW : ICON_HIDE;
   }
   syncPosition() {
     if (!this.btn)
@@ -69,7 +95,10 @@ var MinimizeToolbarPlugin = class extends import_obsidian.Plugin {
   wireViewport() {
     if (!window.visualViewport)
       return;
-    const handler = () => this.syncPosition();
+    const handler = () => {
+      this.syncPosition();
+      this.syncVisibility();
+    };
     window.visualViewport.addEventListener("resize", handler);
     window.visualViewport.addEventListener("scroll", handler);
     this.register(() => {
@@ -138,7 +167,7 @@ var SettingsTab = class extends import_obsidian.PluginSettingTab {
   display() {
     const { containerEl } = this;
     containerEl.empty();
-    new import_obsidian.Setting(containerEl).setName("Button \u2014 bottom (px)").setDesc("Gap above the keyboard (or screen bottom when keyboard is hidden). Drag the button to reposition.").addText((t) => t.setValue(String(this.plugin.settings.bottom)).onChange(async (v) => {
+    new import_obsidian.Setting(containerEl).setName("Button \u2014 bottom (px)").setDesc("Gap above the keyboard top. Drag the button to reposition.").addText((t) => t.setValue(String(this.plugin.settings.bottom)).onChange(async (v) => {
       this.plugin.settings.bottom = Number(v) || DEFAULTS.bottom;
       this.plugin.syncPosition();
       await this.plugin.saveSettings();
