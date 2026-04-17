@@ -1,24 +1,42 @@
-.mt-toggle {
+/* Hide native toolbar + spacer when toolbar is minimized */
+body.mt-hidden .mobile-toolbar { display: none; }
+body.mt-hidden .mobile-toolbar-spacer { height: 0; }
+
+/* Hide the native keyboard-dismiss button whenever we've tagged it */
+.mt-native-dismiss-hidden { display: none !important; }
+
+/* Base button: hidden by default, minimal, flat, accent-colored */
+.mt-btn {
   position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background-color: var(--interactive-accent);
-  color: var(--text-on-accent);
-  display: flex;
+  width: 44px;
+  height: 44px;
+  display: none;
   align-items: center;
   justify-content: center;
+  background: transparent;
+  color: var(--interactive-accent);
   z-index: 9999;
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
   cursor: pointer;
 }
 
-.mt-toggle svg {
-  pointer-events: none;
+.mt-btn svg { pointer-events: none; }
+
+/* Default placement (bottom-right, above keyboard/safe-area).
+   Overridden to sit near the native dismiss slot in a later release. */
+#mt-minimize,
+#mt-dismiss {
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
+  right: calc(env(safe-area-inset-right, 0px) + 8px);
 }
+#mt-expand {
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
+  right: calc(env(safe-area-inset-right, 0px) + 60px);
+}
+
+/* Visibility gated on keyboard-active + toolbar state */
+body.mt-keyboard-active:not(.mt-hidden) #mt-minimize { display: flex; }
+body.mt-keyboard-active.mt-hidden #mt-expand,
+body.mt-keyboard-active.mt-hidden #mt-dismiss { display: flex; }
