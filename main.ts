@@ -1,18 +1,24 @@
 import { App, Plugin, PluginSettingTab, Setting, Platform } from 'obsidian';
 
-const ICON_EXPAND = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 13l5-5 5 5"/><path d="M7 18l5-5 5 5"/><path d="M4 20h16"/></svg>`;
-const ICON_MINIMIZE = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>`;
-const ICON_DISMISS_KB = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="9" rx="2"/><path d="M7 8h.01M10 8h.01M13 8h.01M16 8h.01"/><path d="M6 11h12"/><path d="M8 16l4 4 4-4"/></svg>`;
+const ICON_EXPAND = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 13l5-5 5 5"/><path d="M7 18l5-5 5 5"/><path d="M4 20h16"/></svg>`;
+const ICON_MINIMIZE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>`;
+const ICON_DISMISS_KB = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="9" rx="2"/><path d="M7 8h.01M10 8h.01M13 8h.01M16 8h.01"/><path d="M6 11h12"/><path d="M8 16l4 4 4-4"/></svg>`;
 
 interface Settings {
   hidden: boolean;
-  offsetVisible: number;
-  offsetHidden: number;
+  buttonSize: number;
+  yOffsetVisible: number;
+  yOffsetHidden: number;
+  xOffsetVisible: number;
+  xOffsetHidden: number;
 }
 const DEFAULTS: Settings = {
   hidden: false,
-  offsetVisible: 24,
-  offsetHidden: 10,
+  buttonSize: 44,
+  yOffsetVisible: 24,
+  yOffsetHidden: 10,
+  xOffsetVisible: 0,
+  xOffsetHidden: 0,
 };
 
 const REPO_URL = 'https://github.com/LeviathanDuck/Obsidian-Minimize-Mobile-Toolbar';
@@ -56,6 +62,7 @@ export default class MinimizeToolbarPlugin extends Plugin {
     this.btnMinimize = this.makeButton('mt-minimize', ICON_MINIMIZE, () => this.setHidden(true));
     this.btnExpand = this.makeButton('mt-expand', ICON_EXPAND, () => this.setHidden(false));
     this.btnDismiss = this.makeButton('mt-dismiss', ICON_DISMISS_KB, () => this.dismissKeyboard());
+    this.applyButtonSize();
   }
 
   private makeButton(id: string, icon: string, onTap: () => void): HTMLElement {
@@ -103,13 +110,22 @@ export default class MinimizeToolbarPlugin extends Plugin {
     }
   }
 
-  private applyOffset() {
+  applyButtonSize() {
+    const size = `${this.settings.buttonSize}px`;
+    [this.btnMinimize, this.btnExpand, this.btnDismiss].forEach(b => {
+      if (!b) return;
+      b.style.width = size;
+      b.style.height = size;
+    });
+  }
+
+  applyOffset() {
     if (!this.flexContainer) return;
-    const offset = this.settings.hidden ? this.settings.offsetHidden : this.settings.offsetVisible;
-    // Keep the container in flex flow with zero margin — the visual lift is done
-    // via translateY on the buttons, so no gap in the layout shows bg color.
+    const y = this.settings.hidden ? this.settings.yOffsetHidden : this.settings.yOffsetVisible;
+    const x = this.settings.hidden ? this.settings.xOffsetHidden : this.settings.xOffsetVisible;
     this.flexContainer.style.marginBottom = '0';
-    this.flexContainer.style.setProperty('--mt-offset', `${offset}px`);
+    this.flexContainer.style.setProperty('--mt-y-offset', `${y}px`);
+    this.flexContainer.style.setProperty('--mt-x-offset', `${x}px`);
   }
 
   private wireKeyboardDetection() {
@@ -172,6 +188,9 @@ export default class MinimizeToolbarPlugin extends Plugin {
 }
 
 class MTSettingTab extends PluginSettingTab {
+  private previewMinimized = false;
+  private previewEl: HTMLElement | null = null;
+
   constructor(app: App, private plugin: MinimizeToolbarPlugin) {
     super(app, plugin);
   }
@@ -180,7 +199,6 @@ class MTSettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
 
-    // Mobile-only notice
     if (!Platform.isMobile) {
       const note = containerEl.createEl('div', { cls: 'mt-notice mt-notice-warn' });
       note.createEl('strong', { text: 'This plugin is mobile-only.' });
@@ -190,66 +208,153 @@ class MTSettingTab extends PluginSettingTab {
       return;
     }
 
-    // Beta notice
-    const beta = containerEl.createEl('div', { cls: 'mt-notice mt-notice-info' });
-    beta.createEl('strong', { text: 'Beta testing phase' });
-    beta.createEl('p', {
-      text: 'This plugin is early and under active testing. If something doesn\'t work, please file an issue on GitHub:',
-    });
-    const betaLinkP = beta.createEl('p');
-    betaLinkP.createEl('a', {
-      href: ISSUES_URL,
-      text: 'Submit an issue',
-      attr: { target: '_blank', rel: 'noopener noreferrer' },
-    });
+    // Beta / device / dev notices
+    this.renderNotice(containerEl, 'Beta testing phase',
+      'This plugin is early and under active testing. If something doesn\'t work, please file an issue on GitHub:',
+      { text: 'Submit an issue', href: ISSUES_URL });
 
-    // Device note
-    const dev = containerEl.createEl('div', { cls: 'mt-notice mt-notice-info' });
-    dev.createEl('strong', { text: 'Device compatibility' });
-    dev.createEl('p', {
-      text: 'Developed and optimized on iPhone 15 Pro. Pixel offsets for the controls may need adjustment on devices with different resolutions or screen sizes — use the two offset fields below to fine-tune.',
-    });
+    this.renderNotice(containerEl, 'Device compatibility',
+      'Developed and optimized on iPhone 15 Pro. Pixel offsets for the controls may need adjustment on devices with different resolutions or screen sizes — use the offset fields below and watch the live preview.');
 
-    // Dev brainstorm
-    const brainstorm = containerEl.createEl('div', { cls: 'mt-notice mt-notice-info' });
-    brainstorm.createEl('strong', { text: 'Developers welcome' });
-    brainstorm.createEl('p', {
-      text: 'Making a floating button stick above the software keyboard in Obsidian mobile is surprisingly hard. This plugin uses a flex-sibling injected into .app-container — it rides Obsidian\'s natural layout flow. If you know a more reliable technique, please open an issue or PR:',
-    });
-    const bsLinkP = brainstorm.createEl('p');
-    bsLinkP.createEl('a', {
-      href: REPO_URL,
-      text: 'Repo on GitHub',
-      attr: { target: '_blank', rel: 'noopener noreferrer' },
-    });
+    this.renderNotice(containerEl, 'Developers welcome',
+      'Making a floating button stick above the software keyboard in Obsidian mobile is surprisingly hard. This plugin uses a flex-sibling injected into .app-container — it rides Obsidian\'s natural layout flow. If you know a more reliable technique, please open an issue or PR:',
+      { text: 'Repo on GitHub', href: REPO_URL });
 
-    // Settings divider
-    containerEl.createEl('h3', { text: 'Button position' });
+    // --- LIVE PREVIEW ---
+    containerEl.createEl('h3', { text: 'Preview' });
+    const stageWrap = containerEl.createEl('div', { cls: 'mt-preview-wrap' });
+    const stage = stageWrap.createEl('div', { cls: 'mt-preview-stage' });
+    stage.createEl('div', { cls: 'mt-preview-content', text: 'Editor content' });
+    stage.createEl('div', { cls: 'mt-preview-baseline' });
+    const fakeToolbar = stage.createEl('div', { cls: 'mt-preview-toolbar', text: 'native toolbar' });
+    const row = stage.createEl('div', { cls: 'mt-preview-row' });
+    row.innerHTML =
+      `<span class="mt-preview-btn" data-id="expand">${ICON_EXPAND}</span>` +
+      `<span class="mt-preview-btn" data-id="minimize">${ICON_MINIMIZE}</span>` +
+      `<span class="mt-preview-btn" data-id="dismiss">${ICON_DISMISS_KB}</span>`;
+    this.previewEl = stage;
+    (this.previewEl as any)._fakeToolbar = fakeToolbar;
+    (this.previewEl as any)._row = row;
 
     new Setting(containerEl)
-      .setName('Offset when toolbar is visible (px)')
-      .setDesc('Distance the minimize button sits above the native toolbar.')
+      .setName('Preview state')
+      .setDesc('Toggle what the preview shows so you can fine-tune each state separately.')
+      .addDropdown(d => d
+        .addOption('visible', 'Toolbar visible (minimize button)')
+        .addOption('minimized', 'Toolbar minimized (expand + dismiss buttons)')
+        .setValue(this.previewMinimized ? 'minimized' : 'visible')
+        .onChange(v => {
+          this.previewMinimized = v === 'minimized';
+          this.refreshPreview();
+        }));
+
+    this.refreshPreview();
+
+    // --- BUTTON SIZE ---
+    containerEl.createEl('h3', { text: 'Button size' });
+    new Setting(containerEl)
+      .setName('Button size (px)')
+      .setDesc('Width and height of each button. Apple recommends at least 44×44 for touch targets.')
       .addText(t => t
-        .setValue(String(this.plugin.settings.offsetVisible))
+        .setValue(String(this.plugin.settings.buttonSize))
+        .onChange(async (value) => {
+          const n = Number(value);
+          if (!isFinite(n) || n < 16) return;
+          this.plugin.settings.buttonSize = n;
+          await this.plugin.saveSettings();
+          this.plugin.applyButtonSize();
+          this.refreshPreview();
+        }));
+
+    // --- VISIBLE-STATE OFFSETS ---
+    containerEl.createEl('h3', { text: 'When toolbar is visible' });
+    this.offsetField(containerEl, 'Y offset (px)',
+      'Lift the minimize button above the native toolbar.',
+      () => this.plugin.settings.yOffsetVisible,
+      n => { this.plugin.settings.yOffsetVisible = n; });
+    this.offsetField(containerEl, 'X offset (px)',
+      'Shift left from the right edge. Positive = further from the edge.',
+      () => this.plugin.settings.xOffsetVisible,
+      n => { this.plugin.settings.xOffsetVisible = n; });
+
+    // --- MINIMIZED-STATE OFFSETS ---
+    containerEl.createEl('h3', { text: 'When toolbar is minimized' });
+    this.offsetField(containerEl, 'Y offset (px)',
+      'Lift the expand + dismiss buttons above their resting position.',
+      () => this.plugin.settings.yOffsetHidden,
+      n => { this.plugin.settings.yOffsetHidden = n; });
+    this.offsetField(containerEl, 'X offset (px)',
+      'Shift left from the right edge. Positive = further from the edge.',
+      () => this.plugin.settings.xOffsetHidden,
+      n => { this.plugin.settings.xOffsetHidden = n; });
+  }
+
+  private offsetField(
+    container: HTMLElement,
+    name: string,
+    desc: string,
+    get: () => number,
+    set: (n: number) => void,
+  ) {
+    new Setting(container)
+      .setName(name)
+      .setDesc(desc)
+      .addText(t => t
+        .setValue(String(get()))
         .onChange(async (value) => {
           const n = Number(value);
           if (!isFinite(n)) return;
-          this.plugin.settings.offsetVisible = n;
+          set(n);
           await this.plugin.saveSettings();
-          (this.plugin as any).applyOffset();
+          this.plugin.applyOffset();
+          this.refreshPreview();
         }));
+  }
 
-    new Setting(containerEl)
-      .setName('Offset when toolbar is minimized (px)')
-      .setDesc('Distance the expand + dismiss buttons sit above their resting position.')
-      .addText(t => t
-        .setValue(String(this.plugin.settings.offsetHidden))
-        .onChange(async (value) => {
-          const n = Number(value);
-          if (!isFinite(n)) return;
-          this.plugin.settings.offsetHidden = n;
-          await this.plugin.saveSettings();
-          (this.plugin as any).applyOffset();
-        }));
+  private renderNotice(
+    container: HTMLElement,
+    title: string,
+    body: string,
+    link?: { text: string; href: string },
+  ) {
+    const notice = container.createEl('div', { cls: 'mt-notice mt-notice-info' });
+    notice.createEl('strong', { text: title });
+    notice.createEl('p', { text: body });
+    if (link) {
+      const p = notice.createEl('p');
+      p.createEl('a', {
+        href: link.href,
+        text: link.text,
+        attr: { target: '_blank', rel: 'noopener noreferrer' },
+      });
+    }
+  }
+
+  private refreshPreview() {
+    if (!this.previewEl) return;
+    const stage = this.previewEl;
+    const fakeToolbar = (stage as any)._fakeToolbar as HTMLElement;
+    const row = (stage as any)._row as HTMLElement;
+    const minimized = this.previewMinimized;
+    const size = this.plugin.settings.buttonSize;
+    const y = minimized ? this.plugin.settings.yOffsetHidden : this.plugin.settings.yOffsetVisible;
+    const x = minimized ? this.plugin.settings.xOffsetHidden : this.plugin.settings.xOffsetVisible;
+
+    // Show/hide fake toolbar based on state
+    fakeToolbar.style.display = minimized ? 'none' : 'flex';
+
+    // Apply transform on the row to match the real plugin behavior
+    row.style.transform = `translate(${-x}px, ${-y}px)`;
+
+    // Size the buttons and toggle visibility per state
+    row.querySelectorAll<HTMLElement>('.mt-preview-btn').forEach(btn => {
+      btn.style.width = `${size}px`;
+      btn.style.height = `${size}px`;
+      const id = btn.getAttribute('data-id');
+      const show = minimized
+        ? (id === 'expand' || id === 'dismiss')
+        : (id === 'minimize');
+      btn.style.display = show ? 'inline-flex' : 'none';
+    });
   }
 }
