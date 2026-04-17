@@ -15,8 +15,7 @@ body.mt-active::before {
 body.mt-hidden .mobile-toolbar { display: none; }
 body.mt-hidden .mobile-toolbar-spacer { height: 0; min-height: 0; }
 
-/* Buttons: zero-chrome, just the SVG.
-   Pinned center-screen so they're visible while we solve placement separately. */
+/* Zero-chrome button */
 .mt-btn {
   position: fixed;
   width: 44px;
@@ -32,19 +31,44 @@ body.mt-hidden .mobile-toolbar-spacer { height: 0; min-height: 0; }
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
-  top: 50%;
-  transform: translateY(-50%);
   z-index: 99999;
 }
-
 .mt-btn svg { pointer-events: none; display: block; }
 
-/* Horizontal placement — cluster near center */
-#mt-minimize { right: calc(50% - 22px); }
-#mt-dismiss  { right: calc(50% - 22px); }
-#mt-expand   { right: calc(50% + 34px); }
+/* Horizontal placement — right side */
+#mt-minimize,
+#mt-dismiss { right: calc(env(safe-area-inset-right, 0px) + 12px); }
+#mt-expand { right: calc(env(safe-area-inset-right, 0px) + 64px); }
 
 /* State-gated visibility */
 body.mt-active:not(.mt-hidden) #mt-minimize { display: flex; }
 body.mt-active.mt-hidden #mt-expand,
 body.mt-active.mt-hidden #mt-dismiss { display: flex; }
+
+/* --- POSITION STRATEGIES (CSS variants; JS variants set inline `top`) --- */
+
+/* Baseline: center-screen (known working). */
+body.mt-pos-center .mt-btn {
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* CSS top: calc(100% - offset) — relies on fixed positioning resolving 100% to visual viewport. */
+body.mt-pos-top-calc .mt-btn {
+  top: calc(100% - 80px);
+}
+
+/* Dynamic viewport height — adjusts with browser UI / keyboard on modern iOS. */
+body.mt-pos-dvh .mt-btn {
+  top: calc(100dvh - 80px);
+}
+
+/* Small viewport height — uses the smallest possible viewport. */
+body.mt-pos-svh .mt-btn {
+  top: calc(100svh - 80px);
+}
+
+/* Known-bad baseline for comparison: bottom positioning. */
+body.mt-pos-bottom-fixed .mt-btn {
+  bottom: 80px;
+}
