@@ -38,10 +38,16 @@ var MinimizeToolbarPlugin = class extends import_obsidian.Plugin {
       return;
     this.app.workspace.onLayoutReady(() => {
       this.createButton();
-      this.syncAll();
+      this.cacheRect();
+      this.applyState();
+      this.syncIcon();
+      this.syncPosition();
+      this.startObserver();
     });
     this.registerEvent(this.app.workspace.on("layout-change", () => this.syncAll()));
-    this.registerEvent(this.app.workspace.on("active-leaf-change", () => this.syncAll()));
+    this.registerEvent(this.app.workspace.on("active-leaf-change", () => {
+      setTimeout(() => this.syncAll(), 50);
+    }));
   }
   toolbar() {
     return document.querySelector(".mobile-toolbar");
@@ -61,26 +67,24 @@ var MinimizeToolbarPlugin = class extends import_obsidian.Plugin {
     if (closeBtn)
       this.closeBtnRect = closeBtn.getBoundingClientRect();
   }
-  isEditorActive() {
-    const view = this.app.workspace.getActiveViewOfType(import_obsidian.MarkdownView);
-    return view !== null && view.getMode() !== "preview";
+  startObserver() {
+    const observer = new MutationObserver(() => {
+      if (!this.settings.hidden)
+        this.cacheRect();
+      this.syncPosition();
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    this.register(() => observer.disconnect());
   }
   syncAll() {
     if (!this.settings.hidden)
       this.cacheRect();
     this.applyState();
-    this.syncVisibility();
     this.syncPosition();
-  }
-  syncVisibility() {
-    if (!this.btn)
-      return;
-    this.btn.style.display = this.isEditorActive() ? "flex" : "none";
   }
   createButton() {
     this.btn = document.createElement("div");
     this.btn.addClass("mt-toggle");
-    this.btn.style.display = "none";
     this.syncIcon();
     this.btn.addEventListener("touchstart", (e) => e.preventDefault(), { passive: false });
     document.body.appendChild(this.btn);
@@ -93,22 +97,33 @@ var MinimizeToolbarPlugin = class extends import_obsidian.Plugin {
     this.btn.innerHTML = this.settings.hidden ? ICON_SHOW : ICON_HIDE;
   }
   syncPosition() {
-    if (!this.btn || !this.closeBtnRect)
+    if (!this.btn)
       return;
-    const r = this.closeBtnRect;
-    const fromBottom = window.innerHeight - r.bottom;
-    if (this.settings.hidden) {
-      this.btn.style.bottom = `${fromBottom}px`;
-      this.btn.style.right = `${window.innerWidth - r.left + 8}px`;
+    if (this.closeBtnRect) {
+      const r = this.closeBtnRect;
+      const fromBottom = window.innerHeight - r.bottom;
+      if (this.settings.hidden) {
+        this.btn.style.bottom = `${fromBottom}px`;
+        this.btn.style.right = `${window.innerWidth - r.left + 8}px`;
+      } else {
+        this.btn.style.bottom = `${fromBottom}px`;
+        this.btn.style.right = `${window.innerWidth - r.right}px`;
+      }
     } else {
-      this.btn.style.bottom = `${fromBottom}px`;
-      this.btn.style.right = `${window.innerWidth - r.right}px`;
+      const vv = window.visualViewport;
+      const kbHeight = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
+      this.btn.style.bottom = `calc(${kbHeight + 8}px + env(safe-area-inset-bottom, 0px))`;
+      this.btn.style.right = `calc(8px + env(safe-area-inset-right, 0px))`;
     }
   }
   wireViewport() {
     if (!window.visualViewport)
       return;
-    const handler = () => this.syncAll();
+    const handler = () => {
+      if (!this.settings.hidden)
+        this.cacheRect();
+      this.syncPosition();
+    };
     window.visualViewport.addEventListener("resize", handler);
     window.visualViewport.addEventListener("scroll", handler);
     this.register(() => {
