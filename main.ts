@@ -4,16 +4,31 @@ const ICON_EXPAND = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="
 const ICON_MINIMIZE = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>`;
 const ICON_DISMISS_KB = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="9" rx="2"/><path d="M7 8h.01M10 8h.01M13 8h.01M16 8h.01"/><path d="M6 11h12"/><path d="M8 16l4 4 4-4"/></svg>`;
 
-type Strategy = 'center' | 'top-calc' | 'dvh' | 'svh' | 'vv-js' | 'window-js' | 'bottom-fixed';
+type Strategy =
+  | 'flex-sibling'
+  | 'center'
+  | 'top-calc'
+  | 'dvh'
+  | 'svh'
+  | 'vv-js'
+  | 'window-js'
+  | 'bottom-fixed';
 
 interface Settings {
   hidden: boolean;
   strategy: Strategy;
-  offset: number;
+  offsetVisible: number;
+  offsetHidden: number;
 }
-const DEFAULTS: Settings = { hidden: false, strategy: 'center', offset: 80 };
+const DEFAULTS: Settings = {
+  hidden: false,
+  strategy: 'flex-sibling',
+  offsetVisible: 120,
+  offsetHidden: 60,
+};
 
 const STRATEGY_CLASSES = [
+  'mt-pos-flex-sibling',
   'mt-pos-center',
   'mt-pos-top-calc',
   'mt-pos-dvh',
@@ -26,14 +41,16 @@ const STRATEGY_CLASSES = [
 const CLS_HIDDEN = 'mt-hidden';
 const CLS_KB_ACTIVE = 'mt-keyboard-active';
 const CLS_ACTIVE = 'mt-active';
+const CONTAINER_ID = 'mt-flex-container';
 
 export default class MinimizeToolbarPlugin extends Plugin {
   settings: Settings;
   private btnMinimize: HTMLElement | null = null;
   private btnExpand: HTMLElement | null = null;
   private btnDismiss: HTMLElement | null = null;
+  private flexContainer: HTMLElement | null = null;
   private capKbHandles: Array<{ remove: () => void }> = [];
-  private jsPosTeardown: (() => void) | null = null;
+  private strategyTeardown: (() => void) | null = null;
 
   async onload() {
     await this.loadSettings();
@@ -48,8 +65,14 @@ export default class MinimizeToolbarPlugin extends Plugin {
       this.wireKeyboardDetection();
     });
 
-    this.registerEvent(this.app.workspace.on('layout-change', () => this.applyState()));
-    this.registerEvent(this.app.workspace.on('active-leaf-change', () => this.applyState()));
+    this.registerEvent(this.app.workspace.on('layout-change', () => {
+      this.applyState();
+      this.reapplyFlexSiblingIfNeeded();
+    }));
+    this.registerEvent(this.app.workspace.on('active-leaf-change', () => {
+      this.applyState();
+      this.reapplyFlexSiblingIfNeeded();
+    }));
   }
 
   private createButtons() {
@@ -104,6 +127,8 @@ export default class MinimizeToolbarPlugin extends Plugin {
 
   applyState() {
     document.body.toggleClass(CLS_HIDDEN, this.settings.hidden);
+    // Re-apply strategy so per-state offset is picked up
+    this.applyStrategy();
   }
 
   setHidden(hidden: boolean) {
@@ -112,10 +137,15 @@ export default class MinimizeToolbarPlugin extends Plugin {
     this.saveSettings();
   }
 
+  private currentOffset(): number {
+    return this.settings.hidden ? this.settings.offsetHidden : this.settings.offsetVisible;
+  }
+
   applyStrategy() {
-    // Clear previous JS-driven listeners and inline styles.
-    this.jsPosTeardown?.();
-    this.jsPosTeardown = null;
+    // Tear down previous
+    this.strategyTeardown?.();
+    this.strategyTeardown = null;
+    // Reset inline styles on buttons
     [this.btnMinimize, this.btnExpand, this.btnDismiss].forEach(b => {
       if (b) {
         b.style.top = '';
@@ -123,29 +153,101 @@ export default class MinimizeToolbarPlugin extends Plugin {
         b.style.transform = '';
       }
     });
-    // Clear all strategy classes, then apply the active one.
+    // Clear all strategy body classes
     STRATEGY_CLASSES.forEach(c => document.body.removeClass(c));
+
+    // Move buttons back to body (in case they were inside flex container)
+    [this.btnMinimize, this.btnExpand, this.btnDismiss].forEach(b => {
+      if (b && b.parentElement !== document.body) document.body.appendChild(b);
+    });
+    // Remove old flex container
+    if (this.flexContainer) {
+      this.flexContainer.remove();
+      this.flexContainer = null;
+    }
+
     document.body.addClass(`mt-pos-${this.settings.strategy}`);
 
-    // JS-driven strategies need listeners.
-    if (this.settings.strategy === 'vv-js') this.setupVvJs();
-    if (this.settings.strategy === 'window-js') this.setupWindowJs();
+    switch (this.settings.strategy) {
+      case 'flex-sibling': this.setupFlexSibling(); break;
+      case 'vv-js': this.setupVvJs(); break;
+      case 'window-js': this.setupWindowJs(); break;
+      case 'top-calc': this.setInlineTop(`calc(100% - ${this.currentOffset()}px)`); break;
+      case 'dvh': this.setInlineTop(`calc(100dvh - ${this.currentOffset()}px)`); break;
+      case 'svh': this.setInlineTop(`calc(100svh - ${this.currentOffset()}px)`); break;
+      case 'bottom-fixed': this.setInlineBottom(`${this.currentOffset()}px`); break;
+      case 'center': /* pure CSS — top: 50% */ break;
+    }
+  }
+
+  private setInlineTop(val: string) {
+    [this.btnMinimize, this.btnExpand, this.btnDismiss].forEach(b => {
+      if (b) b.style.top = val;
+    });
+  }
+
+  private setInlineBottom(val: string) {
+    [this.btnMinimize, this.btnExpand, this.btnDismiss].forEach(b => {
+      if (b) b.style.bottom = val;
+    });
+  }
+
+  private setupFlexSibling() {
+    const appContainer = document.querySelector('.app-container') as HTMLElement | null;
+    if (!appContainer) return;
+
+    const container = document.createElement('div');
+    container.id = CONTAINER_ID;
+    container.addClass('mt-flex-container');
+    container.style.marginBottom = `${this.currentOffset()}px`;
+    this.flexContainer = container;
+
+    // Move buttons into container
+    [this.btnMinimize, this.btnExpand, this.btnDismiss].forEach(b => {
+      if (b) container.appendChild(b);
+    });
+
+    // Insert just before .mobile-toolbar (so we sit directly above it); fallback to before .mobile-navbar
+    const toolbar = document.querySelector('.mobile-toolbar');
+    const navbar = document.querySelector('.mobile-navbar');
+    if (toolbar && toolbar.parentElement === appContainer) {
+      appContainer.insertBefore(container, toolbar);
+    } else if (navbar && navbar.parentElement === appContainer) {
+      appContainer.insertBefore(container, navbar);
+    } else {
+      appContainer.appendChild(container);
+    }
+
+    this.strategyTeardown = () => {
+      // Move buttons back to body
+      [this.btnMinimize, this.btnExpand, this.btnDismiss].forEach(b => {
+        if (b) document.body.appendChild(b);
+      });
+      container.remove();
+      if (this.flexContainer === container) this.flexContainer = null;
+    };
+  }
+
+  private reapplyFlexSiblingIfNeeded() {
+    if (this.settings.strategy !== 'flex-sibling') return;
+    // If the container fell out of the DOM (e.g. Obsidian re-rendered), re-insert
+    if (!this.flexContainer || !document.body.contains(this.flexContainer)) {
+      this.applyStrategy();
+    }
   }
 
   private setupVvJs() {
     if (!window.visualViewport) return;
     const vv = window.visualViewport;
     const update = () => {
-      const top = vv.offsetTop + vv.height - this.settings.offset;
-      [this.btnMinimize, this.btnExpand, this.btnDismiss].forEach(b => {
-        if (b) b.style.top = `${top}px`;
-      });
+      const top = vv.offsetTop + vv.height - this.currentOffset();
+      this.setInlineTop(`${top}px`);
     };
     update();
     vv.addEventListener('resize', update);
     vv.addEventListener('scroll', update);
     window.addEventListener('orientationchange', update);
-    this.jsPosTeardown = () => {
+    this.strategyTeardown = () => {
       vv.removeEventListener('resize', update);
       vv.removeEventListener('scroll', update);
       window.removeEventListener('orientationchange', update);
@@ -154,26 +256,28 @@ export default class MinimizeToolbarPlugin extends Plugin {
 
   private setupWindowJs() {
     const update = () => {
-      const top = window.innerHeight - this.settings.offset;
-      [this.btnMinimize, this.btnExpand, this.btnDismiss].forEach(b => {
-        if (b) b.style.top = `${top}px`;
-      });
+      const top = window.innerHeight - this.currentOffset();
+      this.setInlineTop(`${top}px`);
     };
     update();
     window.addEventListener('resize', update);
     window.addEventListener('orientationchange', update);
-    this.jsPosTeardown = () => {
+    this.strategyTeardown = () => {
       window.removeEventListener('resize', update);
       window.removeEventListener('orientationchange', update);
     };
   }
 
   onunload() {
-    this.jsPosTeardown?.();
+    this.strategyTeardown?.();
     STRATEGY_CLASSES.forEach(c => document.body.removeClass(c));
     document.body.removeClass(CLS_HIDDEN);
     document.body.removeClass(CLS_KB_ACTIVE);
     document.body.removeClass(CLS_ACTIVE);
+    if (this.flexContainer) {
+      this.flexContainer.remove();
+      this.flexContainer = null;
+    }
   }
 
   async loadSettings() {
@@ -196,15 +300,16 @@ class MTSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName('Button position strategy')
-      .setDesc('Each strategy places the buttons differently. Try each on your device and pick the one that sits just above the keyboard.')
+      .setDesc('Flex-sibling is the default — it mimics gay-toolbar by inserting a container into .app-container, so Obsidian handles the keyboard-aware positioning. The rest are alternates to test if flex-sibling misbehaves.')
       .addDropdown(d => d
-        .addOption('center', 'Center of screen (baseline, known working)')
+        .addOption('flex-sibling', 'Flex sibling in .app-container (gay-toolbar style, default)')
+        .addOption('center', 'Center of screen (baseline)')
         .addOption('top-calc', 'CSS top: calc(100% - offset)')
-        .addOption('dvh', 'CSS top: calc(100dvh - offset) — dynamic viewport')
-        .addOption('svh', 'CSS top: calc(100svh - offset) — small viewport')
-        .addOption('vv-js', 'JS visualViewport.height - offset (recommended)')
+        .addOption('dvh', 'CSS top: calc(100dvh - offset)')
+        .addOption('svh', 'CSS top: calc(100svh - offset)')
+        .addOption('vv-js', 'JS visualViewport.height - offset')
         .addOption('window-js', 'JS window.innerHeight - offset')
-        .addOption('bottom-fixed', 'CSS bottom: offset (known bad baseline)')
+        .addOption('bottom-fixed', 'CSS bottom: offset (known bad)')
         .setValue(this.plugin.settings.strategy)
         .onChange(async (value) => {
           this.plugin.settings.strategy = value as Strategy;
@@ -213,14 +318,27 @@ class MTSettingTab extends PluginSettingTab {
         }));
 
     new Setting(containerEl)
-      .setName('Offset (px)')
-      .setDesc('Distance from bottom of visible area (or from bottom of screen for bottom-fixed). Applies to every strategy.')
+      .setName('Offset when toolbar is visible (px)')
+      .setDesc('Used for the minimize button when the native toolbar is showing. Higher = button sits higher above the keyboard (needs to clear the toolbar).')
       .addText(t => t
-        .setValue(String(this.plugin.settings.offset))
+        .setValue(String(this.plugin.settings.offsetVisible))
         .onChange(async (value) => {
           const n = Number(value);
           if (!isFinite(n)) return;
-          this.plugin.settings.offset = n;
+          this.plugin.settings.offsetVisible = n;
+          await this.plugin.saveSettings();
+          this.plugin.applyStrategy();
+        }));
+
+    new Setting(containerEl)
+      .setName('Offset when toolbar is minimized (px)')
+      .setDesc('Used for expand + dismiss buttons when the toolbar is hidden. Typically smaller — buttons can sit lower because the toolbar isn\'t there.')
+      .addText(t => t
+        .setValue(String(this.plugin.settings.offsetHidden))
+        .onChange(async (value) => {
+          const n = Number(value);
+          if (!isFinite(n)) return;
+          this.plugin.settings.offsetHidden = n;
           await this.plugin.saveSettings();
           this.plugin.applyStrategy();
         }));

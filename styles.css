@@ -15,7 +15,7 @@ body.mt-active::before {
 body.mt-hidden .mobile-toolbar { display: none; }
 body.mt-hidden .mobile-toolbar-spacer { height: 0; min-height: 0; }
 
-/* Zero-chrome button */
+/* Zero-chrome button (base; position rules differ by strategy) */
 .mt-btn {
   position: fixed;
   width: 44px;
@@ -45,30 +45,33 @@ body.mt-active:not(.mt-hidden) #mt-minimize { display: flex; }
 body.mt-active.mt-hidden #mt-expand,
 body.mt-active.mt-hidden #mt-dismiss { display: flex; }
 
-/* --- POSITION STRATEGIES (CSS variants; JS variants set inline `top`) --- */
+/* --- POSITION STRATEGIES --- */
 
-/* Baseline: center-screen (known working). */
+/* Flex sibling: buttons live in a DOM container that rides Obsidian's layout flow.
+   Reset fixed positioning — they flow naturally inside the container. */
+body.mt-pos-flex-sibling .mt-btn {
+  position: static;
+  top: auto;
+  bottom: auto;
+  right: auto;
+  left: auto;
+  transform: none;
+}
+
+.mt-flex-container {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  /* margin-bottom is set inline per state by main.ts */
+}
+
+/* Center-screen baseline */
 body.mt-pos-center .mt-btn {
   top: 50%;
   transform: translateY(-50%);
 }
 
-/* CSS top: calc(100% - offset) — relies on fixed positioning resolving 100% to visual viewport. */
-body.mt-pos-top-calc .mt-btn {
-  top: calc(100% - 80px);
-}
-
-/* Dynamic viewport height — adjusts with browser UI / keyboard on modern iOS. */
-body.mt-pos-dvh .mt-btn {
-  top: calc(100dvh - 80px);
-}
-
-/* Small viewport height — uses the smallest possible viewport. */
-body.mt-pos-svh .mt-btn {
-  top: calc(100svh - 80px);
-}
-
-/* Known-bad baseline for comparison: bottom positioning. */
-body.mt-pos-bottom-fixed .mt-btn {
-  bottom: 80px;
-}
+/* Other strategies set `top` or `bottom` inline — no CSS rule needed for them */

@@ -26,8 +26,14 @@ var import_obsidian = require("obsidian");
 var ICON_EXPAND = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 13l5-5 5 5"/><path d="M7 18l5-5 5 5"/><path d="M4 20h16"/></svg>`;
 var ICON_MINIMIZE = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>`;
 var ICON_DISMISS_KB = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="9" rx="2"/><path d="M7 8h.01M10 8h.01M13 8h.01M16 8h.01"/><path d="M6 11h12"/><path d="M8 16l4 4 4-4"/></svg>`;
-var DEFAULTS = { hidden: false, strategy: "center", offset: 80 };
+var DEFAULTS = {
+  hidden: false,
+  strategy: "flex-sibling",
+  offsetVisible: 120,
+  offsetHidden: 60
+};
 var STRATEGY_CLASSES = [
+  "mt-pos-flex-sibling",
   "mt-pos-center",
   "mt-pos-top-calc",
   "mt-pos-dvh",
@@ -39,14 +45,16 @@ var STRATEGY_CLASSES = [
 var CLS_HIDDEN = "mt-hidden";
 var CLS_KB_ACTIVE = "mt-keyboard-active";
 var CLS_ACTIVE = "mt-active";
+var CONTAINER_ID = "mt-flex-container";
 var MinimizeToolbarPlugin = class extends import_obsidian.Plugin {
   constructor() {
     super(...arguments);
     this.btnMinimize = null;
     this.btnExpand = null;
     this.btnDismiss = null;
+    this.flexContainer = null;
     this.capKbHandles = [];
-    this.jsPosTeardown = null;
+    this.strategyTeardown = null;
   }
   async onload() {
     await this.loadSettings();
@@ -60,8 +68,14 @@ var MinimizeToolbarPlugin = class extends import_obsidian.Plugin {
       this.applyStrategy();
       this.wireKeyboardDetection();
     });
-    this.registerEvent(this.app.workspace.on("layout-change", () => this.applyState()));
-    this.registerEvent(this.app.workspace.on("active-leaf-change", () => this.applyState()));
+    this.registerEvent(this.app.workspace.on("layout-change", () => {
+      this.applyState();
+      this.reapplyFlexSiblingIfNeeded();
+    }));
+    this.registerEvent(this.app.workspace.on("active-leaf-change", () => {
+      this.applyState();
+      this.reapplyFlexSiblingIfNeeded();
+    }));
   }
   createButtons() {
     this.btnMinimize = this.makeButton("mt-minimize", ICON_MINIMIZE, () => this.setHidden(true));
@@ -115,16 +129,20 @@ var MinimizeToolbarPlugin = class extends import_obsidian.Plugin {
   }
   applyState() {
     document.body.toggleClass(CLS_HIDDEN, this.settings.hidden);
+    this.applyStrategy();
   }
   setHidden(hidden) {
     this.settings.hidden = hidden;
     this.applyState();
     this.saveSettings();
   }
+  currentOffset() {
+    return this.settings.hidden ? this.settings.offsetHidden : this.settings.offsetVisible;
+  }
   applyStrategy() {
     var _a;
-    (_a = this.jsPosTeardown) == null ? void 0 : _a.call(this);
-    this.jsPosTeardown = null;
+    (_a = this.strategyTeardown) == null ? void 0 : _a.call(this);
+    this.strategyTeardown = null;
     [this.btnMinimize, this.btnExpand, this.btnDismiss].forEach((b) => {
       if (b) {
         b.style.top = "";
@@ -133,28 +151,105 @@ var MinimizeToolbarPlugin = class extends import_obsidian.Plugin {
       }
     });
     STRATEGY_CLASSES.forEach((c) => document.body.removeClass(c));
+    [this.btnMinimize, this.btnExpand, this.btnDismiss].forEach((b) => {
+      if (b && b.parentElement !== document.body)
+        document.body.appendChild(b);
+    });
+    if (this.flexContainer) {
+      this.flexContainer.remove();
+      this.flexContainer = null;
+    }
     document.body.addClass(`mt-pos-${this.settings.strategy}`);
-    if (this.settings.strategy === "vv-js")
-      this.setupVvJs();
-    if (this.settings.strategy === "window-js")
-      this.setupWindowJs();
+    switch (this.settings.strategy) {
+      case "flex-sibling":
+        this.setupFlexSibling();
+        break;
+      case "vv-js":
+        this.setupVvJs();
+        break;
+      case "window-js":
+        this.setupWindowJs();
+        break;
+      case "top-calc":
+        this.setInlineTop(`calc(100% - ${this.currentOffset()}px)`);
+        break;
+      case "dvh":
+        this.setInlineTop(`calc(100dvh - ${this.currentOffset()}px)`);
+        break;
+      case "svh":
+        this.setInlineTop(`calc(100svh - ${this.currentOffset()}px)`);
+        break;
+      case "bottom-fixed":
+        this.setInlineBottom(`${this.currentOffset()}px`);
+        break;
+      case "center":
+        break;
+    }
+  }
+  setInlineTop(val) {
+    [this.btnMinimize, this.btnExpand, this.btnDismiss].forEach((b) => {
+      if (b)
+        b.style.top = val;
+    });
+  }
+  setInlineBottom(val) {
+    [this.btnMinimize, this.btnExpand, this.btnDismiss].forEach((b) => {
+      if (b)
+        b.style.bottom = val;
+    });
+  }
+  setupFlexSibling() {
+    const appContainer = document.querySelector(".app-container");
+    if (!appContainer)
+      return;
+    const container = document.createElement("div");
+    container.id = CONTAINER_ID;
+    container.addClass("mt-flex-container");
+    container.style.marginBottom = `${this.currentOffset()}px`;
+    this.flexContainer = container;
+    [this.btnMinimize, this.btnExpand, this.btnDismiss].forEach((b) => {
+      if (b)
+        container.appendChild(b);
+    });
+    const toolbar = document.querySelector(".mobile-toolbar");
+    const navbar = document.querySelector(".mobile-navbar");
+    if (toolbar && toolbar.parentElement === appContainer) {
+      appContainer.insertBefore(container, toolbar);
+    } else if (navbar && navbar.parentElement === appContainer) {
+      appContainer.insertBefore(container, navbar);
+    } else {
+      appContainer.appendChild(container);
+    }
+    this.strategyTeardown = () => {
+      [this.btnMinimize, this.btnExpand, this.btnDismiss].forEach((b) => {
+        if (b)
+          document.body.appendChild(b);
+      });
+      container.remove();
+      if (this.flexContainer === container)
+        this.flexContainer = null;
+    };
+  }
+  reapplyFlexSiblingIfNeeded() {
+    if (this.settings.strategy !== "flex-sibling")
+      return;
+    if (!this.flexContainer || !document.body.contains(this.flexContainer)) {
+      this.applyStrategy();
+    }
   }
   setupVvJs() {
     if (!window.visualViewport)
       return;
     const vv = window.visualViewport;
     const update = () => {
-      const top = vv.offsetTop + vv.height - this.settings.offset;
-      [this.btnMinimize, this.btnExpand, this.btnDismiss].forEach((b) => {
-        if (b)
-          b.style.top = `${top}px`;
-      });
+      const top = vv.offsetTop + vv.height - this.currentOffset();
+      this.setInlineTop(`${top}px`);
     };
     update();
     vv.addEventListener("resize", update);
     vv.addEventListener("scroll", update);
     window.addEventListener("orientationchange", update);
-    this.jsPosTeardown = () => {
+    this.strategyTeardown = () => {
       vv.removeEventListener("resize", update);
       vv.removeEventListener("scroll", update);
       window.removeEventListener("orientationchange", update);
@@ -162,27 +257,28 @@ var MinimizeToolbarPlugin = class extends import_obsidian.Plugin {
   }
   setupWindowJs() {
     const update = () => {
-      const top = window.innerHeight - this.settings.offset;
-      [this.btnMinimize, this.btnExpand, this.btnDismiss].forEach((b) => {
-        if (b)
-          b.style.top = `${top}px`;
-      });
+      const top = window.innerHeight - this.currentOffset();
+      this.setInlineTop(`${top}px`);
     };
     update();
     window.addEventListener("resize", update);
     window.addEventListener("orientationchange", update);
-    this.jsPosTeardown = () => {
+    this.strategyTeardown = () => {
       window.removeEventListener("resize", update);
       window.removeEventListener("orientationchange", update);
     };
   }
   onunload() {
     var _a;
-    (_a = this.jsPosTeardown) == null ? void 0 : _a.call(this);
+    (_a = this.strategyTeardown) == null ? void 0 : _a.call(this);
     STRATEGY_CLASSES.forEach((c) => document.body.removeClass(c));
     document.body.removeClass(CLS_HIDDEN);
     document.body.removeClass(CLS_KB_ACTIVE);
     document.body.removeClass(CLS_ACTIVE);
+    if (this.flexContainer) {
+      this.flexContainer.remove();
+      this.flexContainer = null;
+    }
   }
   async loadSettings() {
     this.settings = Object.assign({}, DEFAULTS, await this.loadData());
@@ -199,16 +295,24 @@ var MTSettingTab = class extends import_obsidian.PluginSettingTab {
   display() {
     const { containerEl } = this;
     containerEl.empty();
-    new import_obsidian.Setting(containerEl).setName("Button position strategy").setDesc("Each strategy places the buttons differently. Try each on your device and pick the one that sits just above the keyboard.").addDropdown((d) => d.addOption("center", "Center of screen (baseline, known working)").addOption("top-calc", "CSS top: calc(100% - offset)").addOption("dvh", "CSS top: calc(100dvh - offset) \u2014 dynamic viewport").addOption("svh", "CSS top: calc(100svh - offset) \u2014 small viewport").addOption("vv-js", "JS visualViewport.height - offset (recommended)").addOption("window-js", "JS window.innerHeight - offset").addOption("bottom-fixed", "CSS bottom: offset (known bad baseline)").setValue(this.plugin.settings.strategy).onChange(async (value) => {
+    new import_obsidian.Setting(containerEl).setName("Button position strategy").setDesc("Flex-sibling is the default \u2014 it mimics gay-toolbar by inserting a container into .app-container, so Obsidian handles the keyboard-aware positioning. The rest are alternates to test if flex-sibling misbehaves.").addDropdown((d) => d.addOption("flex-sibling", "Flex sibling in .app-container (gay-toolbar style, default)").addOption("center", "Center of screen (baseline)").addOption("top-calc", "CSS top: calc(100% - offset)").addOption("dvh", "CSS top: calc(100dvh - offset)").addOption("svh", "CSS top: calc(100svh - offset)").addOption("vv-js", "JS visualViewport.height - offset").addOption("window-js", "JS window.innerHeight - offset").addOption("bottom-fixed", "CSS bottom: offset (known bad)").setValue(this.plugin.settings.strategy).onChange(async (value) => {
       this.plugin.settings.strategy = value;
       await this.plugin.saveSettings();
       this.plugin.applyStrategy();
     }));
-    new import_obsidian.Setting(containerEl).setName("Offset (px)").setDesc("Distance from bottom of visible area (or from bottom of screen for bottom-fixed). Applies to every strategy.").addText((t) => t.setValue(String(this.plugin.settings.offset)).onChange(async (value) => {
+    new import_obsidian.Setting(containerEl).setName("Offset when toolbar is visible (px)").setDesc("Used for the minimize button when the native toolbar is showing. Higher = button sits higher above the keyboard (needs to clear the toolbar).").addText((t) => t.setValue(String(this.plugin.settings.offsetVisible)).onChange(async (value) => {
       const n = Number(value);
       if (!isFinite(n))
         return;
-      this.plugin.settings.offset = n;
+      this.plugin.settings.offsetVisible = n;
+      await this.plugin.saveSettings();
+      this.plugin.applyStrategy();
+    }));
+    new import_obsidian.Setting(containerEl).setName("Offset when toolbar is minimized (px)").setDesc("Used for expand + dismiss buttons when the toolbar is hidden. Typically smaller \u2014 buttons can sit lower because the toolbar isn't there.").addText((t) => t.setValue(String(this.plugin.settings.offsetHidden)).onChange(async (value) => {
+      const n = Number(value);
+      if (!isFinite(n))
+        return;
+      this.plugin.settings.offsetHidden = n;
       await this.plugin.saveSettings();
       this.plugin.applyStrategy();
     }));
