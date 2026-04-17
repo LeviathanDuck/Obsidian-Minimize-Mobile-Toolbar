@@ -11,9 +11,12 @@ interface Settings {
 }
 const DEFAULTS: Settings = {
   hidden: false,
-  offsetVisible: 55,
-  offsetHidden: 0,
+  offsetVisible: 24,
+  offsetHidden: 10,
 };
+
+const REPO_URL = 'https://github.com/LeviathanDuck/Obsidian-Minimize-Mobile-Toolbar';
+const ISSUES_URL = `${REPO_URL}/issues`;
 
 const CLS_HIDDEN = 'mt-hidden';
 const CLS_KB_ACTIVE = 'mt-keyboard-active';
@@ -176,6 +179,52 @@ class MTSettingTab extends PluginSettingTab {
   display() {
     const { containerEl } = this;
     containerEl.empty();
+
+    // Mobile-only notice
+    if (!Platform.isMobile) {
+      const note = containerEl.createEl('div', { cls: 'mt-notice mt-notice-warn' });
+      note.createEl('strong', { text: 'This plugin is mobile-only.' });
+      note.createEl('p', {
+        text: 'It has no effect on desktop — the native Obsidian toolbar this plugin targets only exists on mobile.',
+      });
+      return;
+    }
+
+    // Beta notice
+    const beta = containerEl.createEl('div', { cls: 'mt-notice mt-notice-info' });
+    beta.createEl('strong', { text: 'Beta testing phase' });
+    beta.createEl('p', {
+      text: 'This plugin is early and under active testing. If something doesn\'t work, please file an issue on GitHub:',
+    });
+    const betaLinkP = beta.createEl('p');
+    betaLinkP.createEl('a', {
+      href: ISSUES_URL,
+      text: 'Submit an issue',
+      attr: { target: '_blank', rel: 'noopener noreferrer' },
+    });
+
+    // Device note
+    const dev = containerEl.createEl('div', { cls: 'mt-notice mt-notice-info' });
+    dev.createEl('strong', { text: 'Device compatibility' });
+    dev.createEl('p', {
+      text: 'Developed and optimized on iPhone 15 Pro. Pixel offsets for the controls may need adjustment on devices with different resolutions or screen sizes — use the two offset fields below to fine-tune.',
+    });
+
+    // Dev brainstorm
+    const brainstorm = containerEl.createEl('div', { cls: 'mt-notice mt-notice-info' });
+    brainstorm.createEl('strong', { text: 'Developers welcome' });
+    brainstorm.createEl('p', {
+      text: 'Making a floating button stick above the software keyboard in Obsidian mobile is surprisingly hard. This plugin uses a flex-sibling injected into .app-container — it rides Obsidian\'s natural layout flow. If you know a more reliable technique, please open an issue or PR:',
+    });
+    const bsLinkP = brainstorm.createEl('p');
+    bsLinkP.createEl('a', {
+      href: REPO_URL,
+      text: 'Repo on GitHub',
+      attr: { target: '_blank', rel: 'noopener noreferrer' },
+    });
+
+    // Settings divider
+    containerEl.createEl('h3', { text: 'Button position' });
 
     new Setting(containerEl)
       .setName('Offset when toolbar is visible (px)')

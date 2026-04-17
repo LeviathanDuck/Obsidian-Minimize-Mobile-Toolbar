@@ -1,3 +1,19 @@
+/* Settings-tab notice blocks */
+.mt-notice {
+  margin: 12px 0;
+  padding: 12px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+}
+.mt-notice strong { display: block; margin-bottom: 4px; }
+.mt-notice p { margin: 4px 0; }
+.mt-notice a { color: var(--interactive-accent); text-decoration: underline; }
+.mt-notice-warn {
+  border-color: var(--text-warning, #e8a53f);
+  background: var(--background-modifier-error-hover, var(--background-secondary));
+}
+
 /* Hide native toolbar + spacer when minimized; null out any lingering background */
 body.mt-hidden .mobile-toolbar {
   display: none !important;

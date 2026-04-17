@@ -28,9 +28,11 @@ var ICON_MINIMIZE = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="
 var ICON_DISMISS_KB = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="9" rx="2"/><path d="M7 8h.01M10 8h.01M13 8h.01M16 8h.01"/><path d="M6 11h12"/><path d="M8 16l4 4 4-4"/></svg>`;
 var DEFAULTS = {
   hidden: false,
-  offsetVisible: 55,
-  offsetHidden: 0
+  offsetVisible: 24,
+  offsetHidden: 10
 };
+var REPO_URL = "https://github.com/LeviathanDuck/Obsidian-Minimize-Mobile-Toolbar";
+var ISSUES_URL = `${REPO_URL}/issues`;
 var CLS_HIDDEN = "mt-hidden";
 var CLS_KB_ACTIVE = "mt-keyboard-active";
 var CONTAINER_ID = "mt-flex-container";
@@ -181,6 +183,42 @@ var MTSettingTab = class extends import_obsidian.PluginSettingTab {
   display() {
     const { containerEl } = this;
     containerEl.empty();
+    if (!import_obsidian.Platform.isMobile) {
+      const note = containerEl.createEl("div", { cls: "mt-notice mt-notice-warn" });
+      note.createEl("strong", { text: "This plugin is mobile-only." });
+      note.createEl("p", {
+        text: "It has no effect on desktop \u2014 the native Obsidian toolbar this plugin targets only exists on mobile."
+      });
+      return;
+    }
+    const beta = containerEl.createEl("div", { cls: "mt-notice mt-notice-info" });
+    beta.createEl("strong", { text: "Beta testing phase" });
+    beta.createEl("p", {
+      text: "This plugin is early and under active testing. If something doesn't work, please file an issue on GitHub:"
+    });
+    const betaLinkP = beta.createEl("p");
+    betaLinkP.createEl("a", {
+      href: ISSUES_URL,
+      text: "Submit an issue",
+      attr: { target: "_blank", rel: "noopener noreferrer" }
+    });
+    const dev = containerEl.createEl("div", { cls: "mt-notice mt-notice-info" });
+    dev.createEl("strong", { text: "Device compatibility" });
+    dev.createEl("p", {
+      text: "Developed and optimized on iPhone 15 Pro. Pixel offsets for the controls may need adjustment on devices with different resolutions or screen sizes \u2014 use the two offset fields below to fine-tune."
+    });
+    const brainstorm = containerEl.createEl("div", { cls: "mt-notice mt-notice-info" });
+    brainstorm.createEl("strong", { text: "Developers welcome" });
+    brainstorm.createEl("p", {
+      text: "Making a floating button stick above the software keyboard in Obsidian mobile is surprisingly hard. This plugin uses a flex-sibling injected into .app-container \u2014 it rides Obsidian's natural layout flow. If you know a more reliable technique, please open an issue or PR:"
+    });
+    const bsLinkP = brainstorm.createEl("p");
+    bsLinkP.createEl("a", {
+      href: REPO_URL,
+      text: "Repo on GitHub",
+      attr: { target: "_blank", rel: "noopener noreferrer" }
+    });
+    containerEl.createEl("h3", { text: "Button position" });
     new import_obsidian.Setting(containerEl).setName("Offset when toolbar is visible (px)").setDesc("Distance the minimize button sits above the native toolbar.").addText((t) => t.setValue(String(this.plugin.settings.offsetVisible)).onChange(async (value) => {
       const n = Number(value);
       if (!isFinite(n))
