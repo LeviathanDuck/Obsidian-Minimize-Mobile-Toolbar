@@ -9,58 +9,15 @@ const DEFAULTS: Settings = { hidden: false };
 export default class MinimizeToolbarPlugin extends Plugin {
   settings: Settings;
   private btn: HTMLElement | null = null;
-  private closeBtnRect: DOMRect | null = null;
 
   async onload() {
     await this.loadSettings();
     if (!Platform.isMobile) return;
-
-    this.app.workspace.onLayoutReady(() => {
-      this.createButton();
-      this.cacheRect();
-      this.applyState();
-      this.syncIcon();
-      this.syncPosition();
-      this.startObserver();
-    });
-
-    this.registerEvent(this.app.workspace.on('layout-change', () => this.syncAll()));
-    this.registerEvent(this.app.workspace.on('active-leaf-change', () => {
-      setTimeout(() => this.syncAll(), 50);
-    }));
+    this.app.workspace.onLayoutReady(() => this.createButton());
   }
 
   private toolbar(): HTMLElement | null {
     return document.querySelector('.mobile-toolbar');
-  }
-
-  private findKeyboardCloseBtn(): HTMLElement | null {
-    const t = this.toolbar();
-    if (!t) return null;
-    const byLabel = t.querySelector('[aria-label*="keyboard" i], [aria-label*="close" i], [aria-label*="dismiss" i]') as HTMLElement;
-    if (byLabel) return byLabel;
-    const opts = t.querySelectorAll('.mobile-toolbar-option');
-    return opts.length ? opts[opts.length - 1] as HTMLElement : null;
-  }
-
-  private cacheRect() {
-    const closeBtn = this.findKeyboardCloseBtn();
-    if (closeBtn) this.closeBtnRect = closeBtn.getBoundingClientRect();
-  }
-
-  private startObserver() {
-    const observer = new MutationObserver(() => {
-      if (!this.settings.hidden) this.cacheRect();
-      this.syncPosition();
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
-    this.register(() => observer.disconnect());
-  }
-
-  private syncAll() {
-    if (!this.settings.hidden) this.cacheRect();
-    this.applyState();
-    this.syncPosition();
   }
 
   private createButton() {
@@ -70,47 +27,11 @@ export default class MinimizeToolbarPlugin extends Plugin {
     this.btn.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
     document.body.appendChild(this.btn);
     this.registerDomEvent(this.btn, 'pointerup', () => this.toggle());
-    this.wireViewport();
   }
 
   syncIcon() {
     if (!this.btn) return;
     this.btn.innerHTML = this.settings.hidden ? ICON_SHOW : ICON_HIDE;
-  }
-
-  syncPosition() {
-    if (!this.btn) return;
-    if (this.closeBtnRect) {
-      const r = this.closeBtnRect;
-      const fromBottom = window.innerHeight - r.bottom;
-      if (this.settings.hidden) {
-        this.btn.style.bottom = `${fromBottom}px`;
-        this.btn.style.right = `${window.innerWidth - r.left + 8}px`;
-      } else {
-        this.btn.style.bottom = `${fromBottom}px`;
-        this.btn.style.right = `${window.innerWidth - r.right}px`;
-      }
-    } else {
-      // Fallback until toolbar is found
-      const vv = window.visualViewport;
-      const kbHeight = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
-      this.btn.style.bottom = `calc(${kbHeight + 8}px + env(safe-area-inset-bottom, 0px))`;
-      this.btn.style.right = `calc(8px + env(safe-area-inset-right, 0px))`;
-    }
-  }
-
-  private wireViewport() {
-    if (!window.visualViewport) return;
-    const handler = () => {
-      if (!this.settings.hidden) this.cacheRect();
-      this.syncPosition();
-    };
-    window.visualViewport.addEventListener('resize', handler);
-    window.visualViewport.addEventListener('scroll', handler);
-    this.register(() => {
-      window.visualViewport?.removeEventListener('resize', handler);
-      window.visualViewport?.removeEventListener('scroll', handler);
-    });
   }
 
   applyState() {
@@ -119,11 +40,9 @@ export default class MinimizeToolbarPlugin extends Plugin {
   }
 
   toggle() {
-    if (!this.settings.hidden) this.cacheRect();
     this.settings.hidden = !this.settings.hidden;
     this.applyState();
     this.syncIcon();
-    this.syncPosition();
     this.saveSettings();
   }
 

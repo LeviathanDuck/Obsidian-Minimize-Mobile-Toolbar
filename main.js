@@ -30,57 +30,15 @@ var MinimizeToolbarPlugin = class extends import_obsidian.Plugin {
   constructor() {
     super(...arguments);
     this.btn = null;
-    this.closeBtnRect = null;
   }
   async onload() {
     await this.loadSettings();
     if (!import_obsidian.Platform.isMobile)
       return;
-    this.app.workspace.onLayoutReady(() => {
-      this.createButton();
-      this.cacheRect();
-      this.applyState();
-      this.syncIcon();
-      this.syncPosition();
-      this.startObserver();
-    });
-    this.registerEvent(this.app.workspace.on("layout-change", () => this.syncAll()));
-    this.registerEvent(this.app.workspace.on("active-leaf-change", () => {
-      setTimeout(() => this.syncAll(), 50);
-    }));
+    this.app.workspace.onLayoutReady(() => this.createButton());
   }
   toolbar() {
     return document.querySelector(".mobile-toolbar");
-  }
-  findKeyboardCloseBtn() {
-    const t = this.toolbar();
-    if (!t)
-      return null;
-    const byLabel = t.querySelector('[aria-label*="keyboard" i], [aria-label*="close" i], [aria-label*="dismiss" i]');
-    if (byLabel)
-      return byLabel;
-    const opts = t.querySelectorAll(".mobile-toolbar-option");
-    return opts.length ? opts[opts.length - 1] : null;
-  }
-  cacheRect() {
-    const closeBtn = this.findKeyboardCloseBtn();
-    if (closeBtn)
-      this.closeBtnRect = closeBtn.getBoundingClientRect();
-  }
-  startObserver() {
-    const observer = new MutationObserver(() => {
-      if (!this.settings.hidden)
-        this.cacheRect();
-      this.syncPosition();
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
-    this.register(() => observer.disconnect());
-  }
-  syncAll() {
-    if (!this.settings.hidden)
-      this.cacheRect();
-    this.applyState();
-    this.syncPosition();
   }
   createButton() {
     this.btn = document.createElement("div");
@@ -89,48 +47,11 @@ var MinimizeToolbarPlugin = class extends import_obsidian.Plugin {
     this.btn.addEventListener("touchstart", (e) => e.preventDefault(), { passive: false });
     document.body.appendChild(this.btn);
     this.registerDomEvent(this.btn, "pointerup", () => this.toggle());
-    this.wireViewport();
   }
   syncIcon() {
     if (!this.btn)
       return;
     this.btn.innerHTML = this.settings.hidden ? ICON_SHOW : ICON_HIDE;
-  }
-  syncPosition() {
-    if (!this.btn)
-      return;
-    if (this.closeBtnRect) {
-      const r = this.closeBtnRect;
-      const fromBottom = window.innerHeight - r.bottom;
-      if (this.settings.hidden) {
-        this.btn.style.bottom = `${fromBottom}px`;
-        this.btn.style.right = `${window.innerWidth - r.left + 8}px`;
-      } else {
-        this.btn.style.bottom = `${fromBottom}px`;
-        this.btn.style.right = `${window.innerWidth - r.right}px`;
-      }
-    } else {
-      const vv = window.visualViewport;
-      const kbHeight = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
-      this.btn.style.bottom = `calc(${kbHeight + 8}px + env(safe-area-inset-bottom, 0px))`;
-      this.btn.style.right = `calc(8px + env(safe-area-inset-right, 0px))`;
-    }
-  }
-  wireViewport() {
-    if (!window.visualViewport)
-      return;
-    const handler = () => {
-      if (!this.settings.hidden)
-        this.cacheRect();
-      this.syncPosition();
-    };
-    window.visualViewport.addEventListener("resize", handler);
-    window.visualViewport.addEventListener("scroll", handler);
-    this.register(() => {
-      var _a, _b;
-      (_a = window.visualViewport) == null ? void 0 : _a.removeEventListener("resize", handler);
-      (_b = window.visualViewport) == null ? void 0 : _b.removeEventListener("scroll", handler);
-    });
   }
   applyState() {
     const t = this.toolbar();
@@ -138,12 +59,9 @@ var MinimizeToolbarPlugin = class extends import_obsidian.Plugin {
       t.style.display = this.settings.hidden ? "none" : "";
   }
   toggle() {
-    if (!this.settings.hidden)
-      this.cacheRect();
     this.settings.hidden = !this.settings.hidden;
     this.applyState();
     this.syncIcon();
-    this.syncPosition();
     this.saveSettings();
   }
   onunload() {

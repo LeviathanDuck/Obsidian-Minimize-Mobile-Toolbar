@@ -1,10 +1,13 @@
 .mt-toggle {
   position: fixed;
-  width: 44px;
-  height: 44px;
-  border-radius: 6px;
-  background-color: var(--mobile-toolbar-background, var(--background-primary));
-  color: var(--interactive-accent);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background-color: var(--interactive-accent);
+  color: var(--text-on-accent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -12,6 +15,7 @@
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
   cursor: pointer;
 }
 
