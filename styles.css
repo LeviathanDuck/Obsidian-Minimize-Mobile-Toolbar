@@ -1,23 +1,9 @@
-/* DEBUG marker — proves plugin CSS is loaded. Tiny red square top-left. */
-body.mt-active::before {
-  content: "";
-  position: fixed;
-  top: 8px;
-  left: 8px;
-  width: 10px;
-  height: 10px;
-  background: red;
-  z-index: 99999;
-  pointer-events: none;
-}
-
-/* Hide toolbar + spacer when minimized */
+/* Hide native toolbar + spacer when minimized */
 body.mt-hidden .mobile-toolbar { display: none; }
 body.mt-hidden .mobile-toolbar-spacer { height: 0; min-height: 0; }
 
-/* Zero-chrome button (base; position rules differ by strategy) */
+/* Zero-chrome button: just the SVG in accent color */
 .mt-btn {
-  position: fixed;
   width: 44px;
   height: 44px;
   display: none;
@@ -31,47 +17,24 @@ body.mt-hidden .mobile-toolbar-spacer { height: 0; min-height: 0; }
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
-  z-index: 99999;
 }
 .mt-btn svg { pointer-events: none; display: block; }
 
-/* Horizontal placement — right side */
-#mt-minimize,
-#mt-dismiss { right: calc(env(safe-area-inset-right, 0px) + 12px); }
-#mt-expand { right: calc(env(safe-area-inset-right, 0px) + 64px); }
-
-/* State-gated visibility */
-body.mt-active:not(.mt-hidden) #mt-minimize { display: flex; }
-body.mt-active.mt-hidden #mt-expand,
-body.mt-active.mt-hidden #mt-dismiss { display: flex; }
-
-/* --- POSITION STRATEGIES --- */
-
-/* Flex sibling: buttons live in a DOM container that rides Obsidian's layout flow.
-   Reset fixed positioning — they flow naturally inside the container. */
-body.mt-pos-flex-sibling .mt-btn {
-  position: static;
-  top: auto;
-  bottom: auto;
-  right: auto;
-  left: auto;
-  transform: none;
-}
-
+/* Flex-sibling container: lives in .app-container, rides natural layout flow.
+   Hidden by default; only shown when the keyboard is active. */
 .mt-flex-container {
-  display: flex;
+  display: none;
   flex-direction: row;
   justify-content: flex-end;
   align-items: center;
   gap: 8px;
   padding: 0 12px;
-  /* margin-bottom is set inline per state by main.ts */
 }
 
-/* Center-screen baseline */
-body.mt-pos-center .mt-btn {
-  top: 50%;
-  transform: translateY(-50%);
-}
+/* Keyboard up — show container */
+body.mt-keyboard-active .mt-flex-container { display: flex; }
 
-/* Other strategies set `top` or `bottom` inline — no CSS rule needed for them */
+/* Which buttons show depends on toolbar state */
+body.mt-keyboard-active:not(.mt-hidden) #mt-minimize { display: flex; }
+body.mt-keyboard-active.mt-hidden #mt-expand,
+body.mt-keyboard-active.mt-hidden #mt-dismiss { display: flex; }
