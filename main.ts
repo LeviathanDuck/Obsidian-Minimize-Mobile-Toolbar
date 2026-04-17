@@ -24,10 +24,6 @@ export default class MinimizeToolbarPlugin extends Plugin {
     return document.querySelector('.mobile-toolbar');
   }
 
-  private toolbarWrap(): HTMLElement | null {
-    return this.toolbar()?.parentElement ?? null;
-  }
-
   private createButton() {
     this.btn = document.createElement('div');
     this.btn.addClass('mt-toggle');
@@ -46,13 +42,17 @@ export default class MinimizeToolbarPlugin extends Plugin {
 
   applyState() {
     const t = this.toolbar();
-    const w = this.toolbarWrap();
+    if (!t) return;
     if (this.settings.hidden) {
-      if (t) t.style.display = 'none';
-      if (w) w.style.display = 'none';
+      t.style.height = '0';
+      t.style.minHeight = '0';
+      t.style.overflow = 'hidden';
+      t.style.padding = '0';
     } else {
-      if (t) t.style.display = '';
-      if (w) w.style.display = '';
+      t.style.height = '';
+      t.style.minHeight = '';
+      t.style.overflow = '';
+      t.style.padding = '';
     }
   }
 
@@ -66,9 +66,12 @@ export default class MinimizeToolbarPlugin extends Plugin {
   onunload() {
     this.btn?.remove();
     const t = this.toolbar();
-    const w = this.toolbarWrap();
-    if (t) t.style.display = '';
-    if (w) w.style.display = '';
+    if (t) {
+      t.style.height = '';
+      t.style.minHeight = '';
+      t.style.overflow = '';
+      t.style.padding = '';
+    }
   }
 
   async loadSettings() {
