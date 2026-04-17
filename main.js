@@ -101,12 +101,14 @@ var MinimizeToolbarPlugin = class extends import_obsidian.Plugin {
     document.body.toggleClass(CLS_KB_ACTIVE, active);
   }
   attachToToolbar() {
+    const optionsList = document.querySelector(".mobile-toolbar .mobile-toolbar-options-list");
     const toolbar = document.querySelector(".mobile-toolbar");
-    if (!toolbar)
+    const host = optionsList != null ? optionsList : toolbar;
+    if (!host)
       return;
     [this.btnMinimize, this.btnExpand, this.btnDismiss].forEach((b) => {
-      if (b && b.parentElement !== toolbar)
-        toolbar.appendChild(b);
+      if (b && b.parentElement !== host)
+        host.appendChild(b);
     });
   }
   observeToolbar() {

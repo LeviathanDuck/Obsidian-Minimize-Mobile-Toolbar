@@ -83,10 +83,12 @@ export default class MinimizeToolbarPlugin extends Plugin {
   }
 
   private attachToToolbar() {
+    const optionsList = document.querySelector('.mobile-toolbar .mobile-toolbar-options-list') as HTMLElement | null;
     const toolbar = document.querySelector('.mobile-toolbar') as HTMLElement | null;
-    if (!toolbar) return;
+    const host = optionsList ?? toolbar;
+    if (!host) return;
     [this.btnMinimize, this.btnExpand, this.btnDismiss].forEach(b => {
-      if (b && b.parentElement !== toolbar) toolbar.appendChild(b);
+      if (b && b.parentElement !== host) host.appendChild(b);
     });
   }
 

@@ -11,12 +11,34 @@ body.mt-active::before {
   pointer-events: none;
 }
 
-/* When minimized: hide ALL native toolbar children, keep toolbar container
-   visible so our buttons (which live inside it) stay positioned. */
-body.mt-hidden .mobile-toolbar > *:not([id^="mt-"]) { display: none; }
-body.mt-hidden .mobile-toolbar-spacer { height: 0; }
+/* --- MINIMIZED STATE --- */
+/* Hide every native descendant inside the toolbar, keep our buttons */
+body.mt-hidden .mobile-toolbar > *:not([id^="mt-"]),
+body.mt-hidden .mobile-toolbar .mobile-toolbar-options-list > *:not([id^="mt-"]) {
+  display: none !important;
+}
+/* Keep the options-list container itself visible so our buttons stay in flex flow */
+body.mt-hidden .mobile-toolbar .mobile-toolbar-options-list {
+  display: flex !important;
+  background: transparent !important;
+  padding: 0 !important;
+  min-height: 0 !important;
+}
+/* Zero the spacer so no empty strip below */
+body.mt-hidden .mobile-toolbar-spacer { height: 0 !important; min-height: 0 !important; }
+/* Strip the toolbar's own chrome so it doesn't show as a black bar */
+body.mt-hidden .mobile-toolbar {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  border-top: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  min-height: 0 !important;
+}
 
-/* Buttons: zero-chrome. Just the SVG with accent color. */
+/* --- BUTTONS --- */
+/* Zero-chrome button: just the SVG in accent color, no box. */
 .mt-btn {
   width: 44px;
   height: 44px;
@@ -37,9 +59,12 @@ body.mt-hidden .mobile-toolbar-spacer { height: 0; }
 
 .mt-btn svg { pointer-events: none; display: block; }
 
-/* State-gated visibility.
-   Toolbar visible → show minimize.
-   Toolbar hidden → show expand + dismiss. */
+/* State-gated visibility */
 body.mt-active:not(.mt-hidden) #mt-minimize { display: flex; }
 body.mt-active.mt-hidden #mt-expand,
 body.mt-active.mt-hidden #mt-dismiss { display: flex; }
+
+/* Right-align: margin-left:auto on the first visible of our buttons
+   pushes it and everything after it to the right end of the flex container. */
+body.mt-active:not(.mt-hidden) #mt-minimize { margin-left: auto; }
+body.mt-active.mt-hidden #mt-expand { margin-left: auto; }
