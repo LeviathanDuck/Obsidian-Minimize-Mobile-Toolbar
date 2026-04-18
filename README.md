@@ -1,5 +1,7 @@
 # Minimize Mobile Editor Toolbar
 
+> 🧪 **Public beta.** This plugin is in active testing. If you hit something unexpected, please [submit an issue on GitHub](https://github.com/LeviathanDuck/Obsidian-Minimize-Mobile-Toolbar/issues) — thanks for helping make it better.
+
 A small Obsidian mobile plugin that lets you hide and restore the native editor toolbar with a floating button, without dismissing the keyboard.
 
 ![Screenshot](assets/IMG_0750.jpg)
