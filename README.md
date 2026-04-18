@@ -8,14 +8,20 @@ A small Obsidian mobile plugin that lets you hide and restore the native editor 
 ## What it does
 
 - **Minimize button** floats above the native toolbar when editing. Tap it to collapse the toolbar and reclaim vertical space.
+
 - **Expand + Dismiss buttons** take its place when minimized — tap expand to bring the toolbar back, or dismiss to close the keyboard.
+
 - All buttons only appear when the software keyboard is active in an editor view.
 - No box, no border — just the SVG icons in your Obsidian accent color.
 
 ## Install via BRAT
 
 1. Install the [BRAT plugin](https://github.com/TfTHacker/obsidian42-brat) in Obsidian
+
+
 2. In BRAT settings, add the beta plugin repository: `LeviathanDuck/Obsidian-Minimize-Mobile-Toolbar`
+
+
 3. Enable the plugin in **Settings → Community Plugins**
 
 ## Settings
@@ -50,3 +56,19 @@ This plugin is mobile-only. It has no runtime effect on desktop — the native t
 ## License
 
 MIT
+
+---
+
+## Author
+
+<p align="center">
+  <a href="https://github.com/LeviathanDuck">
+    <img src="./assets/LeviathanDuck.png" width="100" alt="LeviathanDuck" style="border-radius:50%" />
+  </a>
+</p>
+
+<p align="center">
+  Built by <a href="https://github.com/LeviathanDuck">Leviathan Duck</a> — Leftcoast Media House Inc.<br/>
+  Licensed under <a href="./LICENSE">MIT</a>.<br/>
+  <a href="https://github.com/LeviathanDuck?tab=repositories">More Obsidian plugins &amp; themes</a>
+</p>

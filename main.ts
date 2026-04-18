@@ -287,6 +287,38 @@ class MTSettingTab extends PluginSettingTab {
       'Shift left from the right edge. Positive = further from the edge.',
       () => this.plugin.settings.xOffsetHidden,
       n => { this.plugin.settings.xOffsetHidden = n; });
+
+    // ---- Author block ----
+    const authorBlock = containerEl.createDiv({ cls: "mmet-author-block" });
+    const authorLink = authorBlock.createEl("a", {
+      href: "https://github.com/LeviathanDuck",
+    });
+    authorLink.setAttr("target", "_blank");
+    authorLink.setAttr("rel", "noopener");
+    authorLink.createEl("img", {
+      attr: {
+        src: this.app.vault.adapter.getResourcePath(
+          ".obsidian/plugins/minimize-toolbar/assets/LeviathanDuck.png"
+        ),
+        alt: "LeviathanDuck",
+      },
+      cls: "mmet-author-avatar",
+    });
+    authorBlock.createEl("div", {
+      cls: "mmet-author-name",
+      text: "Leviathan Duck",
+    });
+    authorBlock.createEl("div", {
+      cls: "mmet-author-meta",
+      text: "Leftcoast Media House Inc.",
+    });
+    const moreDiv = authorBlock.createEl("div", { cls: "mmet-author-meta" });
+    const moreLink = moreDiv.createEl("a", {
+      text: "More Obsidian plugins & themes",
+      href: "https://github.com/LeviathanDuck?tab=repositories",
+    });
+    moreLink.setAttr("target", "_blank");
+    moreLink.setAttr("rel", "noopener");
   }
 
   private offsetField(
