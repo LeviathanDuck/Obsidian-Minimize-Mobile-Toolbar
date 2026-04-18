@@ -23,9 +23,72 @@ __export(main_exports, {
 });
 module.exports = __toCommonJS(main_exports);
 var import_obsidian = require("obsidian");
-var ICON_EXPAND = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 13l5-5 5 5"/><path d="M7 18l5-5 5 5"/><path d="M4 20h16"/></svg>`;
-var ICON_MINIMIZE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>`;
-var ICON_DISMISS_KB = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="9" rx="2"/><path d="M7 8h.01M10 8h.01M13 8h.01M16 8h.01"/><path d="M6 11h12"/><path d="M8 16l4 4 4-4"/></svg>`;
+var ICON_EXPAND = {
+  paths: [
+    { d: "M7 13l5-5 5 5" },
+    { d: "M7 18l5-5 5 5" },
+    { d: "M4 20h16" }
+  ]
+};
+var ICON_MINIMIZE = {
+  polylines: [
+    { points: "4 14 10 14 10 20" },
+    { points: "20 10 14 10 14 4" }
+  ],
+  lines: [
+    { x1: "14", y1: "10", x2: "21", y2: "3" },
+    { x1: "3", y1: "21", x2: "10", y2: "14" }
+  ]
+};
+var ICON_DISMISS_KB = {
+  rects: [{ x: "3", y: "4", width: "18", height: "9", rx: "2" }],
+  paths: [
+    { d: "M7 8h.01M10 8h.01M13 8h.01M16 8h.01" },
+    { d: "M6 11h12" },
+    { d: "M8 16l4 4 4-4" }
+  ]
+};
+var SVG_NS = "http://www.w3.org/2000/svg";
+function buildIcon(spec) {
+  var _a, _b, _c, _d;
+  const svg = document.createElementNS(SVG_NS, "svg");
+  svg.setAttribute("xmlns", SVG_NS);
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("fill", "none");
+  svg.setAttribute("stroke", "currentColor");
+  svg.setAttribute("stroke-width", "1.5");
+  svg.setAttribute("stroke-linecap", "round");
+  svg.setAttribute("stroke-linejoin", "round");
+  for (const p of (_a = spec.paths) != null ? _a : []) {
+    const el = document.createElementNS(SVG_NS, "path");
+    el.setAttribute("d", p.d);
+    svg.appendChild(el);
+  }
+  for (const p of (_b = spec.polylines) != null ? _b : []) {
+    const el = document.createElementNS(SVG_NS, "polyline");
+    el.setAttribute("points", p.points);
+    svg.appendChild(el);
+  }
+  for (const r of (_c = spec.rects) != null ? _c : []) {
+    const el = document.createElementNS(SVG_NS, "rect");
+    el.setAttribute("x", r.x);
+    el.setAttribute("y", r.y);
+    el.setAttribute("width", r.width);
+    el.setAttribute("height", r.height);
+    if (r.rx !== void 0)
+      el.setAttribute("rx", r.rx);
+    svg.appendChild(el);
+  }
+  for (const l of (_d = spec.lines) != null ? _d : []) {
+    const el = document.createElementNS(SVG_NS, "line");
+    el.setAttribute("x1", l.x1);
+    el.setAttribute("y1", l.y1);
+    el.setAttribute("x2", l.x2);
+    el.setAttribute("y2", l.y2);
+    svg.appendChild(el);
+  }
+  return svg;
+}
 var DEFAULTS = {
   hidden: false,
   buttonSize: 44,
@@ -78,7 +141,7 @@ var MinimizeToolbarPlugin = class extends import_obsidian.Plugin {
     const el = document.createElement("div");
     el.id = id;
     el.addClass("mt-btn");
-    el.innerHTML = icon;
+    el.appendChild(buildIcon(icon));
     el.addEventListener("touchstart", (e) => e.preventDefault(), { passive: false });
     this.registerDomEvent(el, "pointerup", onTap);
     this.register(() => el.remove());
@@ -196,6 +259,8 @@ var MTSettingTab = class extends import_obsidian.PluginSettingTab {
     this.plugin = plugin;
     this.previewMinimized = false;
     this.previewEl = null;
+    this.previewFakeToolbar = null;
+    this.previewRow = null;
   }
   display() {
     const { containerEl } = this;
@@ -232,10 +297,19 @@ var MTSettingTab = class extends import_obsidian.PluginSettingTab {
     stage.createEl("div", { cls: "mt-preview-baseline" });
     const fakeToolbar = stage.createEl("div", { cls: "mt-preview-toolbar", text: "native toolbar" });
     const row = stage.createEl("div", { cls: "mt-preview-row" });
-    row.innerHTML = `<span class="mt-preview-btn" data-id="expand">${ICON_EXPAND}</span><span class="mt-preview-btn" data-id="minimize">${ICON_MINIMIZE}</span><span class="mt-preview-btn" data-id="dismiss">${ICON_DISMISS_KB}</span>`;
+    const previewIcons = [
+      { id: "expand", icon: ICON_EXPAND },
+      { id: "minimize", icon: ICON_MINIMIZE },
+      { id: "dismiss", icon: ICON_DISMISS_KB }
+    ];
+    for (const { id, icon } of previewIcons) {
+      const btn = row.createEl("span", { cls: "mt-preview-btn" });
+      btn.setAttribute("data-id", id);
+      btn.appendChild(buildIcon(icon));
+    }
     this.previewEl = stage;
-    this.previewEl._fakeToolbar = fakeToolbar;
-    this.previewEl._row = row;
+    this.previewFakeToolbar = fakeToolbar;
+    this.previewRow = row;
     new import_obsidian.Setting(containerEl).setName("Preview state").setDesc("Toggle what the preview shows so you can fine-tune each state separately.").addDropdown((d) => d.addOption("visible", "Toolbar visible (minimize button)").addOption("minimized", "Toolbar minimized (expand + dismiss buttons)").setValue(this.previewMinimized ? "minimized" : "visible").onChange((v) => {
       this.previewMinimized = v === "minimized";
       this.refreshPreview();
@@ -334,11 +408,10 @@ var MTSettingTab = class extends import_obsidian.PluginSettingTab {
     }
   }
   refreshPreview() {
-    if (!this.previewEl)
+    if (!this.previewEl || !this.previewFakeToolbar || !this.previewRow)
       return;
-    const stage = this.previewEl;
-    const fakeToolbar = stage._fakeToolbar;
-    const row = stage._row;
+    const fakeToolbar = this.previewFakeToolbar;
+    const row = this.previewRow;
     const minimized = this.previewMinimized;
     const size = this.plugin.settings.buttonSize;
     const y = minimized ? this.plugin.settings.yOffsetHidden : this.plugin.settings.yOffsetVisible;
