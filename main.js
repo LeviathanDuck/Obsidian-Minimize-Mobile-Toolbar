@@ -290,24 +290,13 @@ var MTSettingTab = class extends import_obsidian.PluginSettingTab {
       }
     );
     const authorBlock = containerEl.createDiv({ cls: "mmet-author-block" });
-    const authorLink = authorBlock.createEl("a", {
+    const nameDiv = authorBlock.createEl("div", { cls: "mmet-author-name" });
+    const nameLink = nameDiv.createEl("a", {
+      text: "Leviathan Duck",
       href: "https://github.com/LeviathanDuck"
     });
-    authorLink.setAttr("target", "_blank");
-    authorLink.setAttr("rel", "noopener");
-    authorLink.createEl("img", {
-      attr: {
-        src: this.app.vault.adapter.getResourcePath(
-          ".obsidian/plugins/minimize-toolbar/assets/LeviathanDuck.png"
-        ),
-        alt: "LeviathanDuck"
-      },
-      cls: "mmet-author-avatar"
-    });
-    authorBlock.createEl("div", {
-      cls: "mmet-author-name",
-      text: "Leviathan Duck"
-    });
+    nameLink.setAttr("target", "_blank");
+    nameLink.setAttr("rel", "noopener");
     authorBlock.createEl("div", {
       cls: "mmet-author-meta",
       text: "Leftcoast Media House Inc."
